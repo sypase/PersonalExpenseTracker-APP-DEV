@@ -1,5 +1,178 @@
-﻿<h3>Dashboard</h3>
+﻿@page "/dashboard"
+@using MauiApp2.Data.Service
+@using MauiApp2.Data.Models
+
+@inject DashboardService DashboardService
+@inject IJSRuntime JSRuntime
+
+@* Add necessary CSS for MudBlazor charts *@
+@using MudBlazor
+@using System.Linq
+@using System.Threading.Tasks
+
+<MudContainer>
+    <MudGrid>
+        <!-- Transaction Summary -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6">Transaction Summary</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Total Inflows:</MudText>
+                            <MudText Typo="Typo.h6">@totalInflows.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Total Outflows:</MudText>
+                            <MudText Typo="Typo.h6">@totalOutflows.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Total Debt:</MudText>
+                            <MudText Typo="Typo.h6">@totalDebt.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Remaining Debt:</MudText>
+                            <MudText Typo="Typo.h6">@remainingDebt.ToString("C")</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Donut Chart: Credit vs Debit -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6">Credit vs Debit (Donut Chart)</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudChart Type="ChartType.Doughnut" Data="@donutData" Options="@donutChartOptions" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Line Chart: Transactions Over Time -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6">Transactions Over Time (Line Chart)</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudChart Type="ChartType.Line" Data="@lineChartData" Options="@lineChartOptions" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Pending Debts -->
+    <MudCard>
+        <MudCardHeader>
+            <MudText Typo="Typo.h6">Pending Debts</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (pendingDebts.Any())
+            {
+                    <MudTable Items="pendingDebts" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Creditor</MudTh>
+                            <MudTh>Amount Owed</MudTh>
+                            <MudTh>Due Date</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Creditor">@context.Creditor</MudTd>
+                            <MudTd DataLabel="Amount Owed">@context.AmountOwed.ToString("C")</MudTd>
+                            <MudTd DataLabel="Due Date">@context.DueDate.ToShortDateString()</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+            }
+            else
+            {
+                    <MudText Typo="Typo.body1">No pending debts.</MudText>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @code {
+    private decimal totalInflows;
+    private decimal totalOutflows;
+    private decimal totalDebt;
+    private decimal remainingDebt;
 
+    private List<Debt> pendingDebts = new List<Debt>();
+    private object donutData;
+    private object donutChartOptions;
+    private object lineChartData;
+    private object lineChartOptions;
+    private string userName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get the username from local storage
+        userName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUser") ?? "Guest";
+
+        // Fetch transaction summary
+        var transactionSummary = await DashboardService.GetTransactionSummaryAsync(userName);
+        totalInflows = transactionSummary.totalInflows;
+        totalOutflows = transactionSummary.totalOutflows;
+        totalDebt = transactionSummary.totalDebt;
+        remainingDebt = transactionSummary.remainingDebt;
+
+        // Get pending debts
+        pendingDebts = await DashboardService.GetPendingDebtsAsync(userName);
+
+        // Prepare Donut Chart Data
+        donutData = new
+        {
+            labels = new[] { "Inflows", "Outflows" },
+            datasets = new[]
+            {
+                new {
+                    data = new[] { totalInflows, totalOutflows },
+                    backgroundColor = new[] { "#36A2EB", "#FF6384" }
+                }
+            }
+        };
+
+        donutChartOptions = new
+        {
+            responsive = true,
+            plugins = new { legend = new { position = "top" } }
+        };
+
+        // Prepare Line Chart Data (Dummy for now, replace with actual transactions)
+        lineChartData = new
+        {
+            labels = new[] { "January", "February", "March", "April", "May", "June" },
+            datasets = new[]
+            {
+                new {
+                    label = "Inflows",
+                    data = new[] { 1200, 1500, 1800, 2000, 1700, 1900 },
+                    fill = false,
+                    borderColor = "#36A2EB",
+                    tension = 0.1
+                },
+                new {
+                    label = "Outflows",
+                    data = new[] { 800, 1000, 1300, 1400, 1200, 1500 },
+                    fill = false,
+                    borderColor = "#FF6384",
+                    tension = 0.1
+                }
+            }
+        };
+
+        lineChartOptions = new
+        {
+            responsive = true,
+            plugins = new { legend = new { position = "top" } },
+            scales = new
+            {
+                y = new { min = 0, beginAtZero = true }
+            }
+        };
+    }
 }

@@ -26,6 +26,7 @@ namespace MauiApp2
             builder.Services.AddSingleton<DebtService>();
             builder.Services.AddSingleton<FileUploadService>();
             builder.Services.AddSingleton<FileExportService>();
+            builder.Services.AddSingleton<DashboardService>();
 
 
 
