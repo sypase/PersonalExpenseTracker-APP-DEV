@@ -76,7 +76,7 @@ namespace MauiApp2.Data.Service
         public async Task<List<Transaction>> FilterTransactionsByDateAsync(string username, DateTime startDate, DateTime endDate)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
-            return transactions.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
+            return transactions.Where(t => t.Date.HasValue && t.Date.Value >= startDate && t.Date.Value <= endDate).ToList();
         }
 
         // Get category-wise transaction summary for donut chart

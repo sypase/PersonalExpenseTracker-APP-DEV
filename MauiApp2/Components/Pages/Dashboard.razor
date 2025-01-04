@@ -58,6 +58,43 @@
                 </MudCardContent>
             </MudCard>
         </MudItem>
+
+        <!-- Highest and Lowest Transactions -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6">Highest and Lowest Transactions</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Highest Inflow:</MudText>
+                            <MudText Typo="Typo.h6">@highestInflow?.Title - @highestInflow?.Amount.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Lowest Inflow:</MudText>
+                            <MudText Typo="Typo.h6">@lowestInflow?.Title - @lowestInflow?.Amount.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Highest Outflow:</MudText>
+                            <MudText Typo="Typo.h6">@highestOutflow?.Title - @highestOutflow?.Amount.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Lowest Outflow:</MudText>
+                            <MudText Typo="Typo.h6">@lowestOutflow?.Title - @lowestOutflow?.Amount.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Highest Debt:</MudText>
+                            <MudText Typo="Typo.h6">@highestDebt?.Creditor - @highestDebt?.AmountOwed.ToString("C")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1">Lowest Debt:</MudText>
+                            <MudText Typo="Typo.h6">@lowestDebt?.Creditor - @lowestDebt?.AmountOwed.ToString("C")</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
     </MudGrid>
 
     <!-- Pending Debts -->
@@ -104,6 +141,14 @@
     private double[] donutChartData;
     private string[] donutChartLabels = { "Credit", "Debit" };
 
+    // Highest and Lowest Transactions
+    private Transaction highestInflow;
+    private Transaction lowestInflow;
+    private Transaction highestOutflow;
+    private Transaction lowestOutflow;
+    private Debt highestDebt;
+    private Debt lowestDebt;
+
     protected override async Task OnInitializedAsync()
     {
         // Get the username from local storage
@@ -149,5 +194,14 @@
                 y = new { min = 0, beginAtZero = true }
             }
         };
+
+        // Fetch highest and lowest transactions
+        var highestLowestTransactions = await DashboardService.GetHighestAndLowestTransactionsAsync(userName);
+        highestInflow = highestLowestTransactions.highestInflow;
+        lowestInflow = highestLowestTransactions.lowestInflow;
+        highestOutflow = highestLowestTransactions.highestOutflow;
+        lowestOutflow = highestLowestTransactions.lowestOutflow;
+        highestDebt = highestLowestTransactions.highestDebt;
+        lowestDebt = highestLowestTransactions.lowestDebt;
     }
 }
