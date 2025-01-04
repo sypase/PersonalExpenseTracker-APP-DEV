@@ -1,0 +1,108 @@
+﻿@page "/login"
+@using MudBlazor
+@using MauiApp2.Data.Service
+@using MauiApp2.Data.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<MudPaper Class="d-flex justify-center align-center" Style="min-height: 100vh; background-color: #f4f6f8;">
+    <MudContainer MaxWidth="MaxWidth.Small">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">
+                    Login to Your Account
+                </MudText>
+                <EditForm Model="@loginModel" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <!-- Username -->
+                    <MudTextField @bind-Value="loginModel.Username"
+                                  Label="Username"
+                                  Required="true"
+                                  Variant="Variant.Filled"
+                                  FullWidth="true" />
+
+                    <!-- Password -->
+                    <MudTextField @bind-Value="loginModel.Password"
+                                  Label="Password"
+                                  InputType="InputType.Password"
+                                  Required="true"
+                                  Variant="Variant.Filled"
+                                  FullWidth="true" />
+
+                    <!-- Login Button -->
+                    <MudButton FullWidth="true"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               ButtonType="ButtonType.Submit"
+                               Class="mt-4">
+                        Login
+                    </MudButton>
+
+                    <!-- Error Message -->
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
+                            @errorMessage
+                        </MudAlert>
+                    }
+                </EditForm>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Create Account Link -->
+        <MudText Align="Align.Center" Class="mt-3">
+            Don't have an account? <MudLink Href="/signup" Color="Color.Primary">Sign up here</MudLink>
+        </MudText>
+    </MudContainer>
+</MudPaper>
+
+@code {
+    private class LoginModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private LoginModel loginModel = new LoginModel();
+    private string errorMessage = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Clear any previous error messages
+            errorMessage = string.Empty;
+
+            // Get user from database
+            var user = await UserService.GetUserAsync(loginModel.Username);
+
+            if (user == null)
+            {
+                errorMessage = "Invalid username or password";
+                return;
+            }
+
+            // Validate password
+            if (!UserService.ValidateUser(user, loginModel.Password))
+            {
+                errorMessage = "Invalid username or password";
+                return;
+            }
+
+            // Store user information in local storage or session
+            await JS.InvokeVoidAsync("localStorage.setItem", "currentUser", user.Username);
+            await JS.InvokeVoidAsync("localStorage.setItem", "userCurrency", user.Currency);
+
+            // Redirect to main page or dashboard
+            Navigation.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login error: {ex.Message}";
+        }
+    }
+}

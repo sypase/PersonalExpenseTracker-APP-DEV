@@ -1,0 +1,152 @@
+﻿@page "/debt"
+@using MauiApp2.Data.Models
+@using MauiApp2.Data.Service
+@inject DebtService DebtService
+@inject IJSRuntime JS
+
+<PageTitle>Manage Debts</PageTitle>
+
+<h3>Manage Debts</h3>
+
+<!-- Button to open the add debt dialog -->
+<button class="btn btn-primary" @onclick="OpenAddDebtDialog">Add Debt</button>
+
+<!-- Debts Table -->
+@if (debts != null && debts.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Creditor</th>
+                <th>Amount Owed</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var debt in debts)
+            {
+                <tr>
+                    <td>@debt.Creditor</td>
+                    <td>@debt.AmountOwed.ToString("C")</td>
+                    <td>@debt.DueDate.ToString("d")</td>
+                    <td>@(debt.IsCleared ? "Cleared" : "Outstanding")</td>
+                    <td>
+                        @if (!debt.IsCleared)
+                        {
+                            <button class="btn btn-secondary" @onclick="() => ClearDebt(debt.Creditor)">Clear</button>
+                        }
+                        <button class="btn btn-danger" @onclick="() => DeleteDebt(debt.Creditor)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No debts found.</p>
+}
+
+<!-- Add Debt Dialog (Hidden) -->
+@if (isAddDebtDialogOpen)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Debt</h5>
+                    <button type="button" class="close" aria-label="Close" @onclick="CloseAddDebtDialog">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="creditor">Creditor</label>
+                        <input type="text" class="form-control" id="creditor" @bind="newDebt.Creditor" />
+                    </div>
+                    <div class="form-group">
+                        <label for="amountOwed">Amount Owed</label>
+                        <input type="number" class="form-control" id="amountOwed" @bind="newDebt.AmountOwed" />
+                    </div>
+                    <div class="form-group">
+                        <label for="dueDate">Due Date</label>
+                        <input type="date" class="form-control" id="dueDate" @bind="newDebt.DueDate" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddDebtDialog">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SubmitDebt">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Debt> debts = new List<Debt>();
+    private Debt newDebt;
+    private string currentUsername;
+    private bool isAddDebtDialogOpen = false;
+
+    // Load the username from local storage
+    protected override async Task OnInitializedAsync()
+    {
+        currentUsername = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        await LoadDebts();
+    }
+
+    // Load debts for the current user
+    private async Task LoadDebts()
+    {
+        debts = await DebtService.GetDebtsAsync(currentUsername);
+        StateHasChanged();
+    }
+
+    // Open the dialog to add a new debt
+    private void OpenAddDebtDialog()
+    {
+        newDebt = new Debt(string.Empty, 0, DateTime.Now, currentUsername); // Use the correct constructor
+        isAddDebtDialogOpen = true;
+    }
+
+    // Close the add debt dialog
+    private void CloseAddDebtDialog()
+    {
+        isAddDebtDialogOpen = false;
+    }
+
+    // Submit a new debt
+    private async Task SubmitDebt()
+    {
+        if (!string.IsNullOrEmpty(newDebt.Creditor) && newDebt.AmountOwed > 0 && newDebt.DueDate != null)
+        {
+            await DebtService.AddDebtAsync(newDebt);
+            isAddDebtDialogOpen = false;
+            await LoadDebts();
+        }
+    }
+
+    // Clear a debt for the current user
+    private async Task ClearDebt(string creditor)
+    {
+        await DebtService.ClearDebtAsync(creditor, currentUsername);
+        await LoadDebts();
+    }
+
+    // Delete a debt for the current user
+    private async Task DeleteDebt(string creditor)
+    {
+        await DebtService.DeleteDebtAsync(currentUsername, creditor);
+        await LoadDebts();
+    }
+
+    // Cleanup resources when the page is disposed
+    public async ValueTask DisposeAsync()
+    {
+        // Dispose resources if necessary
+    }
+}
+
+

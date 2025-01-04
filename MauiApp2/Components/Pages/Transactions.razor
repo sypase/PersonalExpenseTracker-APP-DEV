@@ -1,0 +1,201 @@
+﻿@page "/transactions"
+@using MauiApp2.Data.Models
+@using MauiApp2.Data.Service
+@inject TransactionService TransactionService
+@inject IJSRuntime JS
+@inject IDialogService DialogService
+@using MudBlazor
+
+<h3>Transactions</h3>
+
+<MudForm @ref="form" Model="newTransaction" OnValidSubmit="HandleValidSubmit">
+    <MudDataAnnotationsValidator />
+    
+    <MudTextField @bind-Value="newTransaction.Title" Label="Title" Required ErrorText="Title is required" />
+    <MudNumericField @bind-Value="newTransaction.Amount" Label="Amount" Required ErrorText="Amount is required" />
+    <MudDatePicker @bind-Date="newTransaction.Date" Label="Date" Required ErrorText="Date is required" />
+
+    <MudSelect T="string" @bind-Value="newTransaction.Type" Label="Type" Required ErrorText="Type is required">
+        <MudSelectItem Value="@("Credit")">Credit</MudSelectItem>
+        <MudSelectItem Value="@("Debit")">Debit</MudSelectItem>
+        <MudSelectItem Value="@("Debt")">Debt</MudSelectItem>
+    </MudSelect>
+
+    <MudSelect T="string" Value="selectedTag" ValueChanged="@((string val) => SelectedTagChanged(val))" Label="Tags">
+        <MudSelectItem Value="@("Yearly")">Yearly</MudSelectItem>
+        <MudSelectItem Value="@("Monthly")">Monthly</MudSelectItem>
+        <MudSelectItem Value="@("Food")">Food</MudSelectItem>
+        <MudSelectItem Value="@("Drinks")">Drinks</MudSelectItem>
+        <MudSelectItem Value="@("Clothes")">Clothes</MudSelectItem>
+        <MudSelectItem Value="@("Gadgets")">Gadgets</MudSelectItem>
+        <MudSelectItem Value="@("Miscellaneous")">Miscellaneous</MudSelectItem>
+        <MudSelectItem Value="@("Fuel")">Fuel</MudSelectItem>
+        <MudSelectItem Value="@("Rent")">Rent</MudSelectItem>
+        <MudSelectItem Value="@("EMI")">EMI</MudSelectItem>
+        <MudSelectItem Value="@("Party")">Party</MudSelectItem>
+    </MudSelect>
+
+    <MudTextField @bind-Value="customTags" Label="Custom Tags (comma separated)" />
+    <MudTextField @bind-Value="newTransaction.Notes" Label="Notes" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Class="mt-4">Add Transaction</MudButton>
+</MudForm>
+
+@if (transactions != null && transactions.Any())
+{
+    <MudTable Items="transactions" Hover="true" Class="mt-4">
+        <HeaderContent>
+            <MudTh>Title</MudTh>
+            <MudTh>Amount</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Tags</MudTh>
+            <MudTh>Notes</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+            <MudTd DataLabel="Amount">@context.Amount</MudTd>
+            <MudTd DataLabel="Date">@context.Date?.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Type">@context.Type</MudTd>
+            <MudTd DataLabel="Tags">@string.Join(", ", context.Tags)</MudTd>
+            <MudTd DataLabel="Notes">@context.Notes</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton OnClick="() => EditTransaction(context)" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">Edit</MudButton>
+                <MudButton OnClick="() => DeleteTransaction(context.Title)" Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Class="ml-2">Delete</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">No transactions available.</MudAlert>
+}
+
+@code {
+    private MudForm form;
+    private List<Transaction> transactions;
+    private Transaction newTransaction = new Transaction("", 0.0m, DateTime.Now, "", new List<string>(), "", "");
+    private string selectedTag;
+    private string customTags;
+    private string currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        if (!string.IsNullOrEmpty(currentUser))
+        {
+            await LoadTransactions();
+        }
+    }
+
+    private void SelectedTagChanged(string value)
+    {
+        selectedTag = value;
+        StateHasChanged();
+    }
+
+    private async Task LoadTransactions()
+    {
+        if (!string.IsNullOrEmpty(currentUser))
+        {
+            transactions = await TransactionService.GetTransactionsAsync(currentUser);
+        }
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+
+        if (form.IsValid)
+        {
+            await HandleValidSubmit();
+        }
+        else
+        {
+            await DialogService.ShowMessageBox("Validation Error", "Please fill in all required fields correctly.", yesText: "OK");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var tags = new List<string>();
+        
+        if (!string.IsNullOrEmpty(selectedTag))
+        {
+            tags.Add(selectedTag);
+        }
+        
+        if (!string.IsNullOrEmpty(customTags))
+        {
+            tags.AddRange(customTags.Split(',').Select(t => t.Trim()));
+        }
+        
+        newTransaction.Tags = tags;
+
+        if (!string.IsNullOrEmpty(currentUser))
+        {
+            try 
+            {
+                await TransactionService.AddTransactionAsync(newTransaction, currentUser);
+                await LoadTransactions();
+                
+                await DialogService.ShowMessageBox("Success", "Transaction added successfully!", yesText: "OK");
+                
+                // Reset form
+                newTransaction = new Transaction("", 0.0m, DateTime.Now, "", new List<string>(), "", "");
+                selectedTag = string.Empty;
+                customTags = string.Empty;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                await DialogService.ShowMessageBox("Error", $"Failed to add transaction: {ex.Message}", yesText: "OK");
+            }
+        }
+    }
+
+    private async Task EditTransaction(Transaction transaction)
+    {
+        if (!string.IsNullOrEmpty(currentUser))
+        {
+            try 
+            {
+                await TransactionService.UpdateTransactionAsync(transaction, currentUser);
+                await LoadTransactions();
+                await DialogService.ShowMessageBox("Success", "Transaction updated successfully!", yesText: "OK");
+            }
+            catch (Exception ex)
+            {
+                await DialogService.ShowMessageBox("Error", $"Failed to update transaction: {ex.Message}", yesText: "OK");
+            }
+        }
+    }
+
+    private async Task DeleteTransaction(string title)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            "Are you sure you want to delete this transaction?",
+            yesText: "Delete",
+            noText: "Cancel"
+        );
+
+        if (result ?? false)
+        {
+            if (!string.IsNullOrEmpty(currentUser))
+            {
+                try 
+                {
+                    await TransactionService.DeleteTransactionAsync(title, currentUser);
+                    await LoadTransactions();
+                    await DialogService.ShowMessageBox("Success", "Transaction deleted successfully!", yesText: "OK");
+                }
+                catch (Exception ex)
+                {
+                    await DialogService.ShowMessageBox("Error", $"Failed to delete transaction: {ex.Message}", yesText: "OK");
+                }
+            }
+        }
+    }
+}

@@ -1,27 +1,74 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">MauiApp2</a>
-    </div>
-</div>
+﻿@using MudBlazor
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<!-- Sidebar Drawer -->
+<MudDrawer Open="true" Elevation="1" Color="Color.Default" Width="260px" ClipMode="DrawerClipMode.Always">
+    <MudNavMenu>
+        <!-- Title at the top -->
+        <MudText Typo="Typo.h5" Class="px-4 py-2">
+            ExpenseTracker
+        </MudText>
+        <MudDivider Class="mb-2" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+        <!-- Navigation Links -->
+        <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">
+            Dashboard
+        </MudNavLink>
+        <MudNavLink Href="/transactions" Icon="@Icons.Material.Filled.AccountBalanceWallet">
+            Transactions
+        </MudNavLink>
+        <MudNavLink Href="/debt" Icon="@Icons.Material.Filled.MoneyOff">
+            Debt
+        </MudNavLink>
+        <MudNavLink Href="/importexport" Icon="@Icons.Material.Filled.ImportExport">
+            Import/Export
+        </MudNavLink>
+
+        <!-- Settings Section -->
+        <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings" Expanded="true">
+            <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">
+                Profile
+            </MudNavLink>
+            <MudNavLink Href="/preferences" Icon="@Icons.Material.Filled.Tune">
+                Preferences
+            </MudNavLink>
+        </MudNavGroup>
+
+        <!-- Additional Links -->
+        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info">
+            About
+        </MudNavLink>
+
+        <!-- Spacer to push logout and user info to the bottom -->
+        <MudSpacer />
+
+        <!-- User Info and Logout -->
+        <MudDivider Class="mt-2" />
+        <MudText Typo="Typo.body1" Class="px-4 mt-2 mud-text-secondary">
+            @userName
+        </MudText>
+        <MudButton FullWidth="true" Color="Color.Error" OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout" Class="mt-2">
+            Logout
+        </MudButton>
+    </MudNavMenu>
+</MudDrawer>
+
+@code {
+    private string userName = "Loading...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch user name from local storage
+        userName = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser") ?? "Guest";
+    }
+
+    private async Task HandleLogout()
+    {
+        // Clear local storage
+        await JS.InvokeVoidAsync("localStorage.clear");
+
+        // Redirect to login page
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

@@ -1,9 +1,18 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JS
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+    @if (IsUserLoggedIn)
+    {
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+    }
 
     <main>
         <div class="top-row px-4">
@@ -15,3 +24,13 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool IsUserLoggedIn { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        IsUserLoggedIn = !string.IsNullOrEmpty(currentUser);
+    }
+}

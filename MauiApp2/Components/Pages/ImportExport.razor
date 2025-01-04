@@ -1,0 +1,129 @@
+﻿@page "/importexport"
+
+@using MauiApp2.Data.Service
+@inject FileUploadService FileUploadService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+@using MauiApp2.Data.Models
+
+<PageTitle>Import/Export</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudText Typo="Typo.h4" Align="Align.Center">Import Transactions from CSV</MudText>
+
+    <MudPaper Class="pa-4" MaxWidth="MaxWidth.Small" AlignItems="Align.Center">
+        <MudText Typo="Typo.subtitle1">Upload your CSV file to import transactions.</MudText>
+
+        <!-- Use Blazor InputFile component -->
+        <InputFile OnChange="OnFileChange" Accept=".csv" />
+
+        @if (isProcessing)
+        {
+            <p>Processing the file...</p>
+        }
+
+        @if (errorMessage != null)
+        {
+            <p style="color:red;">@errorMessage</p>
+        }
+
+        <MudButton OnClick="SubmitFile" Color="Color.Primary">Submit</MudButton>
+
+        @if (importedTransactions.Any())
+        {
+            <h6>Imported Transactions</h6>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var transaction in importedTransactions)
+                    {
+                        <tr>
+                            <td>@transaction.Title</td>
+                            <td>@transaction.Amount</td>
+                            <td>@transaction.Date?.ToShortDateString() ?? "N/A"</td>
+                            <td>@transaction.Type</td>
+                            <td>@string.Join(", ", transaction.Tags)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<Transaction> importedTransactions = new List<Transaction>();
+    private bool isProcessing = false;
+    private string errorMessage;
+    private string currentUsername;
+    private IBrowserFile selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Retrieve the username from localStorage
+        currentUsername = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        if (string.IsNullOrEmpty(currentUsername))
+        {
+            errorMessage = "User is not logged in.";
+        }
+    }
+
+    private void OnFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        if (selectedFile == null)
+        {
+            errorMessage = "No file selected!";
+        }
+    }
+
+    private async Task SubmitFile()
+    {
+        if (selectedFile == null)
+        {
+            errorMessage = "Please select a file first!";
+            return;
+        }
+
+        try
+        {
+            isProcessing = true;
+            errorMessage = null;
+
+            if (string.IsNullOrEmpty(currentUsername))
+            {
+                errorMessage = "Username not found!";
+                return;
+            }
+
+            // Call the FileUploadService to process the CSV file with the current username
+            await FileUploadService.ProcessCsvFileAsync(selectedFile, currentUsername);
+
+            // Simulate processing and fetching transactions
+            importedTransactions = await GetTransactionsFromFile(selectedFile);  // Replace with actual logic to fetch transactions
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error uploading file: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private Task<List<Transaction>> GetTransactionsFromFile(IBrowserFile file)
+    {
+        // In real-world scenario, this should return the list of transactions from the file processing
+        return Task.FromResult(importedTransactions);
+    }
+}
