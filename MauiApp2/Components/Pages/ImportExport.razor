@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @using Microsoft.AspNetCore.Components.Forms
 @using MauiApp2.Data.Models
+@using MudBlazor
 
 <PageTitle>Import/Export</PageTitle>
 
@@ -20,42 +21,36 @@
 
         @if (isProcessing)
         {
-            <p>Processing the file...</p>
+            <MudLinearProgress Indeterminate="true" />
+            <MudText Typo="Typo.body2">Processing the file...</MudText>
         }
 
-        @if (errorMessage != null)
+        @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <p style="color:red;">@errorMessage</p>
+            <MudText Color="Color.Error" Typo="Typo.body2">@errorMessage</MudText>
         }
 
         <MudButton OnClick="SubmitFile" Color="Color.Primary">Submit</MudButton>
 
         @if (importedTransactions.Any())
         {
-            <h6>Imported Transactions</h6>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Tags</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var transaction in importedTransactions)
-                    {
-                        <tr>
-                            <td>@transaction.Title</td>
-                            <td>@transaction.Amount</td>
-                            <td>@(transaction.Date.HasValue ? transaction.Date.Value.ToString("MM/dd/yyyy") : "N/A")</td>
-                            <td>@transaction.Type</td>
-                            <td>@string.Join(", ", transaction.Tags)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <MudText Typo="Typo.h6">Imported Transactions</MudText>
+            <MudTable Items="importedTransactions" Bordered="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Tags</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Title</MudTd>
+                    <MudTd>@context.Amount</MudTd>
+                    <MudTd>@(context.Date.HasValue ? context.Date.Value.ToString("MM/dd/yyyy") : "N/A")</MudTd>
+                    <MudTd>@context.Type</MudTd>
+                    <MudTd>@string.Join(", ", context.Tags)</MudTd>
+                </RowTemplate>
+            </MudTable>
         }
     </MudPaper>
 </MudContainer>
@@ -67,16 +62,24 @@
     private string currentUsername;
     private IBrowserFile selectedFile;
 
+    // Fetch current username from localStorage when the page initializes
     protected override async Task OnInitializedAsync()
     {
-        // Retrieve the username from localStorage
-        currentUsername = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
-        if (string.IsNullOrEmpty(currentUsername))
+        try
         {
-            errorMessage = "User is not logged in.";
+            currentUsername = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+            if (string.IsNullOrEmpty(currentUsername))
+            {
+                errorMessage = "User is not logged in.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error retrieving username: {ex.Message}";
         }
     }
 
+    // Triggered when a file is selected
     private void OnFileChange(InputFileChangeEventArgs e)
     {
         selectedFile = e.File;
@@ -86,6 +89,7 @@
         }
     }
 
+    // Method to handle file submission
     private async Task SubmitFile()
     {
         if (selectedFile == null)

@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
-using MauiApp2.Data.Models;
 using CsvHelper;
-using Microsoft.Extensions.Logging;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
+using MauiApp2.Data.Models;
 
 namespace MauiApp2.Data.Service
 {
@@ -24,7 +25,19 @@ namespace MauiApp2.Data.Service
         // Class to represent the structure of the transactions file with multiple users
         private class TransactionContainer
         {
-            public Dictionary<string, List<Transaction>> UserTransactions { get; set; }  // Dictionary for each username and its transactions
+            public Dictionary<string, List<Transaction>> UserTransactions { get; set; } = new();
+        }
+
+        // Ensure the transactions file is initialized
+        private async Task<TransactionContainer> EnsureTransactionContainerAsync()
+        {
+            var container = await Utils.LoadFromJsonAsync<TransactionContainer>(transactionsFilePath);
+            if (container == null)
+            {
+                container = new TransactionContainer();
+                await Utils.SaveToJsonAsync(container, transactionsFilePath);
+            }
+            return container;
         }
 
         // Get a list of transactions for a specific user
@@ -32,17 +45,17 @@ namespace MauiApp2.Data.Service
         {
             try
             {
-                var transactionContainer = await Utils.LoadFromJsonAsync<TransactionContainer>(transactionsFilePath);
-                if (transactionContainer != null && transactionContainer.UserTransactions.ContainsKey(refUsername))
+                var transactionContainer = await EnsureTransactionContainerAsync();
+                if (transactionContainer.UserTransactions.TryGetValue(refUsername, out var transactions))
                 {
-                    return transactionContainer.UserTransactions[refUsername];
+                    return transactions;
                 }
-                return new List<Transaction>(); // Return empty list if user not found or no transactions
+                return new List<Transaction>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting transactions for user '{refUsername}': {ex.Message}");
-                return new List<Transaction>(); // Return empty list on error
+                _logger.LogError(ex, $"Error getting transactions for user '{refUsername}'");
+                return new List<Transaction>();
             }
         }
 
@@ -51,78 +64,80 @@ namespace MauiApp2.Data.Service
         {
             try
             {
-                var transactionContainer = await Utils.LoadFromJsonAsync<TransactionContainer>(transactionsFilePath);
-                if (transactionContainer == null)
-                {
-                    transactionContainer = new TransactionContainer
-                    {
-                        UserTransactions = new Dictionary<string, List<Transaction>>()
-                    };
-                }
-
-                // Update the user's transactions or add them if not already present
-                if (transactionContainer.UserTransactions.ContainsKey(refUsername))
-                {
-                    transactionContainer.UserTransactions[refUsername] = transactions.ToList();
-                }
-                else
-                {
-                    transactionContainer.UserTransactions.Add(refUsername, transactions.ToList());
-                }
-
-                // Serialize to JSON and save to the file asynchronously
+                var transactionContainer = await EnsureTransactionContainerAsync();
+                transactionContainer.UserTransactions[refUsername] = transactions.ToList();
                 await Utils.SaveToJsonAsync(transactionContainer, transactionsFilePath);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving transactions for user '{refUsername}': {ex.Message}");
+                _logger.LogError(ex, $"Error saving transactions for user '{refUsername}'");
             }
         }
 
         // Add a new transaction for a specific user
         public async Task AddTransactionAsync(Transaction transaction, string refUsername)
         {
-            var transactions = await GetTransactionsAsync(refUsername);
-            transactions.Add(transaction);
-            await SaveTransactionsAsync(transactions, refUsername);  // Save with refUsername
+            try
+            {
+                var transactions = await GetTransactionsAsync(refUsername);
+                transactions.Add(transaction);
+                await SaveTransactionsAsync(transactions, refUsername);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error adding transaction for user '{refUsername}'");
+            }
         }
 
         // Update an existing transaction for a specific user
         public async Task UpdateTransactionAsync(Transaction updatedTransaction, string refUsername)
         {
-            var transactions = await GetTransactionsAsync(refUsername);
-            var transaction = transactions.FirstOrDefault(t => t.Title == updatedTransaction.Title);
+            try
+            {
+                var transactions = await GetTransactionsAsync(refUsername);
+                var transaction = transactions.FirstOrDefault(t => t.Title == updatedTransaction.Title);
 
-            if (transaction != null)
-            {
-                // Update transaction fields
-                transaction.Amount = updatedTransaction.Amount;
-                transaction.Date = updatedTransaction.Date;
-                transaction.Type = updatedTransaction.Type;
-                transaction.Tags = updatedTransaction.Tags;
-                transaction.Notes = updatedTransaction.Notes;
-                await SaveTransactionsAsync(transactions, refUsername); // Save with refUsername after update
+                if (transaction != null)
+                {
+                    transaction.Amount = updatedTransaction.Amount;
+                    transaction.Date = updatedTransaction.Date;
+                    transaction.Type = updatedTransaction.Type;
+                    transaction.Tags = updatedTransaction.Tags;
+                    transaction.Notes = updatedTransaction.Notes;
+                    await SaveTransactionsAsync(transactions, refUsername);
+                }
+                else
+                {
+                    _logger.LogWarning($"Transaction with title '{updatedTransaction.Title}' not found for user '{refUsername}'.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"Transaction with title '{updatedTransaction.Title}' not found for user '{refUsername}'.");
+                _logger.LogError(ex, $"Error updating transaction for user '{refUsername}'");
             }
         }
 
         // Delete a transaction by its title for a specific user
         public async Task DeleteTransactionAsync(string title, string refUsername)
         {
-            var transactions = await GetTransactionsAsync(refUsername);
-            var transactionToDelete = transactions.FirstOrDefault(t => t.Title == title);
+            try
+            {
+                var transactions = await GetTransactionsAsync(refUsername);
+                var transactionToDelete = transactions.FirstOrDefault(t => t.Title == title);
 
-            if (transactionToDelete != null)
-            {
-                transactions.Remove(transactionToDelete);
-                await SaveTransactionsAsync(transactions, refUsername); // Save with refUsername after delete
+                if (transactionToDelete != null)
+                {
+                    transactions.Remove(transactionToDelete);
+                    await SaveTransactionsAsync(transactions, refUsername);
+                }
+                else
+                {
+                    _logger.LogWarning($"Transaction with title '{title}' not found for user '{refUsername}'.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"Transaction with title '{title}' not found for user '{refUsername}'.");
+                _logger.LogError(ex, $"Error deleting transaction for user '{refUsername}'");
             }
         }
 
@@ -131,17 +146,12 @@ namespace MauiApp2.Data.Service
         {
             try
             {
-                using (var reader = new StreamReader(fileStream))
-                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                using var reader = new StreamReader(fileStream);
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                var records = csv.GetRecords<Transaction>().ToList();
+
+                if (records.Any())
                 {
-                    var records = csv.GetRecords<Transaction>().ToList();
-
-                    if (records == null || records.Count == 0)
-                    {
-                        throw new InvalidOperationException("No valid transactions found in the CSV file.");
-                    }
-
-                    // Add each record to the user's transaction list
                     foreach (var record in records)
                     {
                         await AddTransactionAsync(record, refUsername);
@@ -149,11 +159,14 @@ namespace MauiApp2.Data.Service
 
                     _logger.LogInformation($"Successfully uploaded {records.Count} transactions for user '{refUsername}'.");
                 }
+                else
+                {
+                    _logger.LogWarning("No valid transactions found in the CSV file.");
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error uploading transactions for user '{refUsername}': {ex.Message}");
-                throw new InvalidOperationException("An error occurred while uploading the transactions.");
+                _logger.LogError(ex, $"Error uploading transactions for user '{refUsername}'");
             }
         }
     }
