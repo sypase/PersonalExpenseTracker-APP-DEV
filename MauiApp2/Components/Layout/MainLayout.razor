@@ -9,16 +9,12 @@
 <div class="page">
     @if (IsUserLoggedIn)
     {
-        <div class="sidebar">
-            <NavMenu />
-        </div>
+            <div class="sidebar">
+                <NavMenu />
+            </div>
     }
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
         <article class="content px-4">
             @Body
         </article>
@@ -29,6 +25,13 @@
     private bool IsUserLoggedIn { get; set; }
 
     protected override async Task OnInitializedAsync()
+    {
+        // Update the login state when the component initializes
+        await UpdateLoginState();
+    }
+
+    // Ensures the login state is set during the first render
+    private async Task UpdateLoginState()
     {
         var currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
         IsUserLoggedIn = !string.IsNullOrEmpty(currentUser);

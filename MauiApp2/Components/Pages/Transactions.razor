@@ -38,7 +38,13 @@
     <MudTextField @bind-Value="customTags" Label="Custom Tags (comma separated)" />
     <MudTextField @bind-Value="newTransaction.Notes" Label="Notes" />
 
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Class="mt-4">Add Transaction</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit" Class="mt-4">
+        @(isEditing ? "Update Transaction" : "Add Transaction")
+    </MudButton>
+    @if (isEditing)
+    {
+        <MudButton Variant="Variant.Text" OnClick="CancelEdit" Class="mt-2">Cancel</MudButton>
+    }
 </MudForm>
 
 @if (transactions != null && transactions.Any())
@@ -55,7 +61,20 @@
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Title">@context.Title</MudTd>
-            <MudTd DataLabel="Amount">@context.Amount</MudTd>
+            <MudTd DataLabel="Amount">
+                @if (context.Type == "Debit" || context.Type == "Debt")
+                {
+                    <span style="color: green;">+ @context.Amount.ToString("C")</span>
+                }
+                else if (context.Type == "Credit")
+                {
+                    <span style="color: red;">- @context.Amount.ToString("C")</span>
+                }
+                else
+                {
+                    @context.Amount.ToString("C")
+                }
+            </MudTd>
             <MudTd DataLabel="Date">@context.Date?.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Type">@context.Type</MudTd>
             <MudTd DataLabel="Tags">@string.Join(", ", context.Tags)</MudTd>
@@ -79,6 +98,7 @@ else
     private string selectedTag;
     private string customTags;
     private string currentUser;
+    private bool isEditing = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -120,56 +140,65 @@ else
     private async Task HandleValidSubmit()
     {
         var tags = new List<string>();
-        
+
         if (!string.IsNullOrEmpty(selectedTag))
         {
             tags.Add(selectedTag);
         }
-        
+
         if (!string.IsNullOrEmpty(customTags))
         {
             tags.AddRange(customTags.Split(',').Select(t => t.Trim()));
         }
-        
+
         newTransaction.Tags = tags;
 
         if (!string.IsNullOrEmpty(currentUser))
         {
-            try 
+            try
             {
-                await TransactionService.AddTransactionAsync(newTransaction, currentUser);
+                if (isEditing)
+                {
+                    await TransactionService.UpdateTransactionAsync(newTransaction, currentUser);
+                    await DialogService.ShowMessageBox("Success", "Transaction updated successfully!", yesText: "OK");
+                }
+                else
+                {
+                    await TransactionService.AddTransactionAsync(newTransaction, currentUser);
+                    await DialogService.ShowMessageBox("Success", "Transaction added successfully!", yesText: "OK");
+                }
+
                 await LoadTransactions();
-                
-                await DialogService.ShowMessageBox("Success", "Transaction added successfully!", yesText: "OK");
-                
-                // Reset form
-                newTransaction = new Transaction("", 0.0m, DateTime.Now, "", new List<string>(), "", "");
-                selectedTag = string.Empty;
-                customTags = string.Empty;
-                StateHasChanged();
+                ResetForm();
             }
             catch (Exception ex)
             {
-                await DialogService.ShowMessageBox("Error", $"Failed to add transaction: {ex.Message}", yesText: "OK");
+                await DialogService.ShowMessageBox("Error", $"Failed to save transaction: {ex.Message}", yesText: "OK");
             }
         }
     }
 
-    private async Task EditTransaction(Transaction transaction)
+    private void ResetForm()
     {
-        if (!string.IsNullOrEmpty(currentUser))
-        {
-            try 
-            {
-                await TransactionService.UpdateTransactionAsync(transaction, currentUser);
-                await LoadTransactions();
-                await DialogService.ShowMessageBox("Success", "Transaction updated successfully!", yesText: "OK");
-            }
-            catch (Exception ex)
-            {
-                await DialogService.ShowMessageBox("Error", $"Failed to update transaction: {ex.Message}", yesText: "OK");
-            }
-        }
+        newTransaction = new Transaction("", 0.0m, DateTime.Now, "", new List<string>(), "", "");
+        selectedTag = string.Empty;
+        customTags = string.Empty;
+        isEditing = false;
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void EditTransaction(Transaction transaction)
+    {
+        newTransaction = transaction;
+        selectedTag = transaction.Tags.FirstOrDefault();
+        customTags = string.Join(", ", transaction.Tags.Skip(1));
+        isEditing = true;
+        StateHasChanged();
     }
 
     private async Task DeleteTransaction(string title)
@@ -185,7 +214,7 @@ else
         {
             if (!string.IsNullOrEmpty(currentUser))
             {
-                try 
+                try
                 {
                     await TransactionService.DeleteTransactionAsync(title, currentUser);
                     await LoadTransactions();

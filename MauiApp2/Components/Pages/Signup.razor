@@ -9,49 +9,66 @@
 @using System.Text.Json
 
 <MudPaper Class="d-flex justify-center align-center" Style="min-height: 100vh; background-color: #f4f6f8;">
-    <MudContainer MaxWidth="MaxWidth.Small">
-        <MudCard>
-            <MudCardContent>
-                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">
-                    Create Your Account
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudGrid>
+            <!-- Left Side Content -->
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.h4" Align="Align.Left" Class="mb-3">
+                    Sign up to ExpenseTracker
                 </MudText>
-                <EditForm Model="@newUser" OnValidSubmit="HandleValidSubmit">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-                    <!-- Username -->
-                    <MudTextField @bind-Value="newUser.Username" Label="Username" Required="true" Variant="Variant.Filled" FullWidth="true" />
-                    <!-- Password -->
-                    <MudTextField @bind-Value="newUser.Password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Filled" FullWidth="true" />
-                    <!-- Currency Selection (Dropdown) -->
-                    <MudSelect T="string" @bind-Value="newUser.Currency" Label="Currency" Required="true" Variant="Variant.Filled" FullWidth="true">
-                        <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                        <MudSelectItem Value="@("NPR")">NPR</MudSelectItem>
-                    </MudSelect>
-                    <!-- Sign Up Button -->
-                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="mt-4">
-                        Sign Up
-                    </MudButton>
-                    <!-- Error Message -->
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
-                            @errorMessage
-                        </MudAlert>
-                    }
-                    <!-- Success Message -->
-                    @if (isRegistrationSuccessful)
-                    {
-                        <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mt-3">
-                            Registration Successful! Redirecting to login page...
-                        </MudAlert>
-                    }
-                </EditForm>
-            </MudCardContent>
-        </MudCard>
-        <!-- Already Have Account -->
-        <MudText Align="Align.Center" Class="mt-3">
-            Already have an account? <MudLink Href="/login" Color="Color.Primary">Login here</MudLink>
-        </MudText>
+                <MudText Typo="Typo.body1" Align="Align.Left" Class="mb-4">
+                    Create your account to start tracking your expenses easily and effectively. ExpenseTracker helps you manage your finances with a user-friendly interface and powerful tools.
+                </MudText>
+                <!-- Optional Image -->
+                <MudImage Src="https://i.ibb.co/PCgkFvb/image3.png" Alt="ExpenseTracker Illustration" MaxWidth="100%" />
+            </MudItem>
+
+            <!-- Right Side Form -->
+            <MudItem xs="12" sm="6">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">
+                            Create Your Account
+                        </MudText>
+                        <EditForm Model="@newUser" OnValidSubmit="HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <!-- Username -->
+                            <MudTextField @bind-Value="newUser.Username" Label="Username" Required="true" Variant="Variant.Filled" FullWidth="true" />
+                            <!-- Password -->
+                            <MudTextField @bind-Value="newUser.Password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Filled" FullWidth="true" />
+                            <!-- Currency Selection (Dropdown) -->
+                            <MudSelect T="string" @bind-Value="newUser.Currency" Label="Currency" Required="true" Variant="Variant.Filled" FullWidth="true">
+                                <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                                <MudSelectItem Value="@("NPR")">NPR</MudSelectItem>
+                            </MudSelect>
+                            <!-- Sign Up Button -->
+                            <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="mt-4">
+                                Sign Up
+                            </MudButton>
+                            <!-- Error Message -->
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                    <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
+                                    @errorMessage
+                                    </MudAlert>
+                            }
+                            <!-- Success Message -->
+                            @if (isRegistrationSuccessful)
+                            {
+                                    <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mt-3">
+                                        Registration Successful! Redirecting to login page...
+                                    </MudAlert>
+                            }
+                        </EditForm>
+                    </MudCardContent>
+                </MudCard>
+                <!-- Already Have Account -->
+                <MudText Align="Align.Center" Class="mt-3">
+                    Already have an account? <MudLink Href="/login" Color="Color.Primary">Login here</MudLink>
+                </MudText>
+            </MudItem>
+        </MudGrid>
     </MudContainer>
 </MudPaper>
 

@@ -3,75 +3,85 @@
 @inject IJSRuntime JS
 
 <!-- Sidebar Drawer -->
-<MudDrawer Open="true" Elevation="1" Color="Color.Default" Width="260px" ClipMode="DrawerClipMode.Always">
+<MudDrawer Open="true" Elevation="1" Color="Color.Default" Width="260px" ClipMode="DrawerClipMode.Always" Class="sidebar-drawer">
     <MudNavMenu>
         <!-- Title at the top -->
-        <MudText Typo="Typo.h5" Class="px-4 py-2">
+        <MudText Typo="Typo.h5" Class="px-4 py-3 text-primary" Style="font-weight: 700; font-size: 2rem; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);">
             ExpenseTracker
         </MudText>
+
         <MudDivider Class="mb-2" />
 
+        <!-- User Greeting with Top Margin -->
+        <MudText Typo="Typo.body1" Class="px-4 mt-6 mud-text-secondary d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2 mb-3" />
+            Hello, @userName
+        </MudText>
+
         <!-- Navigation Links -->
-        <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">
+        <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Class="mb-1">
             Dashboard
         </MudNavLink>
-        <MudNavLink Href="/transactions" Icon="@Icons.Material.Filled.AccountBalanceWallet">
+        <MudNavLink Href="/transactions" Icon="@Icons.Material.Filled.AccountBalanceWallet" Class="mb-1">
             Transactions
         </MudNavLink>
-
-        <MudNavLink Href="/detailed-transactions" Icon="@Icons.Material.Filled.AccountBalanceWallet">
+        <MudNavLink Href="/detailed-transactions" Icon="@Icons.Material.Filled.ListAlt" Class="mb-1">
             Detailed Transactions
         </MudNavLink>
-        <MudNavLink Href="/debt" Icon="@Icons.Material.Filled.MoneyOff">
+        <MudNavLink Href="/debt" Icon="@Icons.Material.Filled.MoneyOff" Class="mb-1">
             Debt
         </MudNavLink>
 
         <!-- Import/Export Section with sub-links -->
-        <MudNavGroup Title="Import/Export" Icon="@Icons.Material.Filled.ImportExport" Expanded="true">
-            <MudNavLink Href="/import" Icon="@Icons.Material.Filled.Upload">
+        <MudNavGroup Title="Import/Export" Icon="@Icons.Material.Filled.ImportExport" Expanded="true" Class="mb-2">
+            <MudNavLink Href="/import" Icon="@Icons.Material.Filled.Upload" Class="pl-8 mb-1">
                 Import
             </MudNavLink>
-            <MudNavLink Href="/export" Icon="@Icons.Material.Filled.Download">
+            <MudNavLink Href="/export" Icon="@Icons.Material.Filled.Download" Class="pl-8 mb-1">
                 Export
             </MudNavLink>
         </MudNavGroup>
 
         <!-- Settings Section -->
-        <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings" Expanded="true">
-            <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">
+        <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings" Expanded="true" Class="mb-2">
+            <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person" Class="pl-8 mb-1">
                 Profile
             </MudNavLink>
-            <MudNavLink Href="/preferences" Icon="@Icons.Material.Filled.Tune">
+            <MudNavLink Href="/preferences" Icon="@Icons.Material.Filled.Tune" Class="pl-8 mb-1">
                 Preferences
             </MudNavLink>
         </MudNavGroup>
 
         <!-- Additional Links -->
-        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info">
+        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" Class="mb-1">
             About
         </MudNavLink>
 
-        <!-- Spacer to push logout and user info to the bottom -->
+        <!-- Spacer to push logout button to the bottom -->
         <MudSpacer />
 
         <!-- User Info and Logout -->
         <MudDivider Class="mt-2" />
-        <MudText Typo="Typo.body1" Class="px-4 mt-2 mud-text-secondary">
-            @userName
-        </MudText>
-        <MudButton FullWidth="true" Color="Color.Error" OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout" Class="mt-2">
+        <MudButton FullWidth="true" Color="Color.Error" OnClick="HandleLogout" StartIcon="@Icons.Material.Filled.Logout" Class="mt-2 mb-2">
             Logout
         </MudButton>
     </MudNavMenu>
+
+    <!-- Image at the bottom -->
+    <img src="https://i.ibb.co/tDvGYP6/image5.png" alt="Sidebar Image" class="sidebar-image" />
 </MudDrawer>
 
 @code {
     private string userName = "Loading...";
 
+    // Flag to show loading state
+    private bool isLoading = true;
+
     protected override async Task OnInitializedAsync()
     {
         // Fetch user name from local storage
         userName = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser") ?? "Guest";
+        isLoading = false;
     }
 
     private async Task HandleLogout()

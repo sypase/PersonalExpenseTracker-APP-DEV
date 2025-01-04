@@ -91,15 +91,24 @@ namespace MauiApp2.Data.Service
         }
 
         // Get transactions for line chart (grouped by date)
-        public async Task<Dictionary<DateTime, decimal>> GetTransactionsForLineChartAsync(string username, DateTime startDate, DateTime endDate)
+        public async Task<(List<DateTime> Dates, List<decimal> Amounts)> GetTransactionsForLineChartAsync(string username, DateTime startDate, DateTime endDate)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
             var filteredTransactions = transactions
                 .Where(t => t.Date.HasValue && t.Date.Value >= startDate && t.Date.Value <= endDate)
-                .GroupBy(t => t.Date.Value.Date) // Use .Value to access the non-nullable DateTime
-                .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
+                .OrderBy(t => t.Date)
+                .GroupBy(t => t.Date.Value.Date) // Group by date
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Amount = g.Sum(t => t.Amount)
+                })
+                .ToList();
 
-            return filteredTransactions;
+            var dates = filteredTransactions.Select(t => t.Date).ToList();
+            var amounts = filteredTransactions.Select(t => t.Amount).ToList();
+
+            return (dates, amounts);
         }
     }
 }

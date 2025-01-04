@@ -8,57 +8,150 @@
 @inject IJSRuntime JS
 
 <MudPaper Class="d-flex justify-center align-center" Style="min-height: 100vh; background-color: #f4f6f8;">
-    <MudContainer MaxWidth="MaxWidth.Small">
-        <MudCard>
-            <MudCardContent>
-                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">
-                    Login to Your Account
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="split-layout">
+        <!-- Left Side: Image and Welcome Text -->
+        <div class="welcome-section">
+            <!-- Image -->
+            <img src="https://i.ibb.co/gJp5kVg/piggypangimage.png" alt="Expense Tracker" class="welcome-image" />
+
+            <!-- Welcome Text -->
+            <div class="welcome-text">
+                <MudText Typo="Typo.h3" GutterBottom="true" Class="mb-4 animate-fade-in">
+                    Welcome to Expense Tracker App
                 </MudText>
-                <EditForm Model="@loginModel" OnValidSubmit="HandleValidSubmit">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
+                <MudText Typo="Typo.body1" GutterBottom="true" Class="mb-4 animate-fade-in">
+                    Track your expenses effortlessly! You can add transactions, manage debit/credit, track debts, and view detailed analytics.
+                </MudText>
+            </div>
+        </div>
 
-                    <!-- Username -->
-                    <MudTextField @bind-Value="loginModel.Username"
-                                  Label="Username"
-                                  Required="true"
-                                  Variant="Variant.Filled"
-                                  FullWidth="true" />
+        <!-- Right Side: Login Form -->
+        <div class="login-form">
+            <MudCard Class="no-border">
+                <MudCardContent>
+                    <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true" Class="mb-4">
+                        Login to Your Account
+                    </MudText>
+                    <EditForm Model="@loginModel" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
 
-                    <!-- Password -->
-                    <MudTextField @bind-Value="loginModel.Password"
-                                  Label="Password"
-                                  InputType="InputType.Password"
-                                  Required="true"
-                                  Variant="Variant.Filled"
-                                  FullWidth="true" />
+                        <!-- Username -->
+                        <MudTextField @bind-Value="loginModel.Username"
+                                      Label="Username"
+                                      Required="true"
+                                      Variant="Variant.Filled"
+                                      FullWidth="true"
+                                      Class="mb-4" />
 
-                    <!-- Login Button -->
-                    <MudButton FullWidth="true"
-                               Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               ButtonType="ButtonType.Submit"
-                               Class="mt-4">
-                        Login
-                    </MudButton>
+                        <!-- Password -->
+                        <MudTextField @bind-Value="loginModel.Password"
+                                      Label="Password"
+                                      InputType="InputType.Password"
+                                      Required="true"
+                                      Variant="Variant.Filled"
+                                      FullWidth="true"
+                                      Class="mb-4" />
 
-                    <!-- Error Message -->
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
-                            @errorMessage
-                        </MudAlert>
-                    }
-                </EditForm>
-            </MudCardContent>
-        </MudCard>
+                        <!-- Login Button -->
+                        <MudButton FullWidth="true"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   ButtonType="ButtonType.Submit"
+                                   Class="mt-4">
+                            Login
+                        </MudButton>
 
-        <!-- Create Account Link -->
-        <MudText Align="Align.Center" Class="mt-3">
-            Don't have an account? <MudLink Href="/signup" Color="Color.Primary">Sign up here</MudLink>
-        </MudText>
+                        <!-- Error Message -->
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
+                                @errorMessage
+                                </MudAlert>
+                        }
+                    </EditForm>
+                </MudCardContent>
+            </MudCard>
+
+            <!-- Create Account Link -->
+            <MudText Align="Align.Center" Class="mt-3">
+                Don't have an account? <MudLink Href="/signup" Color="Color.Primary">Sign up here</MudLink>
+            </MudText>
+        </div>
     </MudContainer>
 </MudPaper>
+
+<style>
+    /* Layout for left and right sections */
+    .split-layout {
+        display: flex;
+        gap: 4rem;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2rem;
+    }
+
+    /* Left Side: Welcome Section */
+    .welcome-section {
+        flex: 1;
+        max-width: 50%;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .welcome-image {
+        width: 100%;
+        max-height: 400px;
+        object-fit: cover; /* Ensures the image covers the container */
+        border-radius: 12px;
+    }
+
+    .welcome-text {
+        text-align: left;
+    }
+
+    /* Right Side: Login Form */
+    .login-form {
+        flex: 1;
+        max-width: 500px;
+        background: white;
+        padding: 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Remove border from MudCard */
+    .no-border {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Animation for the welcome message and description */
+    .animate-fade-in {
+        animation: fadeIn 1.5s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Spacing for form elements */
+    .mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem !important;
+    }
+</style>
 
 @code {
     private class LoginModel
@@ -98,7 +191,9 @@
             await JS.InvokeVoidAsync("localStorage.setItem", "userCurrency", user.Currency);
 
             // Redirect to main page or dashboard
-            Navigation.NavigateTo("/dashboard");
+            // Navigation.NavigateTo("/dashboard");
+            await JS.InvokeVoidAsync("eval", "window.location.reload();");
+
         }
         catch (Exception ex)
         {

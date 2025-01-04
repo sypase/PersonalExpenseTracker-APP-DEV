@@ -1,0 +1,12 @@
+/* wwwroot/css/sidebar.css */
+.sidebar-drawer {
+    position: relative;
+}
+
+.sidebar-image {
+    position: absolute;
+    bottom: 0; /* Fix the image to the bottom of the sidebar */
+    width: 100%;
+    height: 300px; /* Adjust the height as needed */
+    object-fit: cover; /* Ensures the image fits without distortion */
+}
