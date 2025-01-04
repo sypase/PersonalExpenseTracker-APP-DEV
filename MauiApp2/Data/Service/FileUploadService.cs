@@ -1,165 +1,145 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using CsvHelper.TypeConversion;
-using MauiApp2.Data.Models;
-using MauiApp2.Data.Service;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using MauiApp2.Data.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Components.Forms;
 using System.Globalization;
+using System.IO;
+using MauiApp2.Data.Service;
+using System.Linq;
 
-namespace MauiApp2.Data.Service
+internal class FileUploadService
 {
-    internal class FileUploadService
-    {
-        private readonly ILogger<FileUploadService> _logger;
-        private readonly TransactionService _transactionService;
+    private readonly ILogger<FileUploadService> _logger;
+    private readonly TransactionService _transactionService;
 
-        public FileUploadService(ILogger<FileUploadService> logger, TransactionService transactionService)
+    public FileUploadService(ILogger<FileUploadService> logger, TransactionService transactionService)
+    {
+        _logger = logger;
+        _transactionService = transactionService;
+    }
+
+    public async Task<List<Transaction>> ProcessCsvFileAsync(IBrowserFile file, string refUsername)
+    {
+        if (file == null)
         {
-            _logger = logger;
-            _transactionService = transactionService;
+            throw new ArgumentException("No file uploaded");
         }
 
-        public async Task ProcessCsvFileAsync(IBrowserFile file, string refUsername)
+        string fileExtension = Path.GetExtension(file.Name).ToLower();
+
+        if (fileExtension != ".csv")
         {
-            if (file == null)
-            {
-                throw new ArgumentException("No file uploaded");
-            }
+            throw new ArgumentException("Unsupported file format. Please upload a CSV file.");
+        }
 
-            string fileExtension = Path.GetExtension(file.Name).ToLower();
+        try
+        {
+            // Parse the CSV file and return the transactions
+            return await ParseCsvFileAsync(file, refUsername);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error processing CSV file: {ex.Message}. File: {file.Name}");
+            throw new InvalidOperationException($"An error occurred while processing the CSV file: {ex.Message}", ex);
+        }
+    }
 
-            if (fileExtension != ".csv")
-            {
-                throw new ArgumentException("Unsupported file format. Please upload a CSV file.");
-            }
+    private async Task<List<Transaction>> ParseCsvFileAsync(IBrowserFile file, string refUsername)
+    {
+        var transactions = new List<Transaction>();
+
+        using (var stream = new MemoryStream())
+        {
+            await file.OpenReadStream().CopyToAsync(stream);
+            stream.Position = 0;
 
             try
             {
-                await ParseAndSaveCsvFileAsync(file, refUsername);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error processing CSV file: {ex.Message}");
-                throw new InvalidOperationException($"An error occurred while processing the CSV file: {ex.Message}");
-            }
-        }
-
-        private async Task ParseAndSaveCsvFileAsync(IBrowserFile file, string refUsername)
-        {
-            using (var stream = new MemoryStream())
-            {
-                await file.OpenReadStream().CopyToAsync(stream);
-                stream.Position = 0;
-
-                try
+                using (var reader = new StreamReader(stream))
                 {
-                    var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+                    string line;
+                    bool isHeader = true;
+                    while ((line = await reader.ReadLineAsync()) != null)
                     {
-                        HeaderValidated = null,
-                        MissingFieldFound = null,
-                        PrepareHeaderForMatch = header => header.ToString().ToLower()
-                    };
+                        var columns = line.Split(',');
 
-                    using (var reader = new StreamReader(stream))
-                    using (var csv = new CsvReader(reader, config))
-                    {
-                        csv.Context.RegisterClassMap<TransactionMap>();
-                        var records = csv.GetRecords<Transaction>().ToList();
-
-                        foreach (var record in records)
+                        if (isHeader)
                         {
-                            await _transactionService.AddTransactionAsync(record, refUsername);
+                            isHeader = false;
+                            continue;
+                        }
+
+                        try
+                        {
+                            var transaction = new Transaction(
+                                columns[0].Trim(),                    // Title
+                                ParseAmount(columns[1].Trim()),       // Amount
+                                ParseDate(columns[2].Trim()),         // Date
+                                columns[3].Trim(),                    // Type
+                                ParseTags(columns[4].Trim()),         // Tags
+                                columns.Length > 5 ? columns[5].Trim() : "",  // Notes
+                                refUsername                            // RefUsername
+                            );
+
+                            transactions.Add(transaction);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Error parsing row: {line}. Exception: {ex.Message}");
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Error uploading transactions from CSV file: {ex.Message}");
-                    throw new InvalidOperationException("Failed to upload transactions.");
-                }
             }
-        }
-    }
-
-    internal class TransactionMap : ClassMap<Transaction>
-    {
-        public TransactionMap()
-        {
-            Map(m => m.Title).Name("title");
-            Map(m => m.Amount).Name("amount").TypeConverter<DecimalConverter>();
-            Map(m => m.Date).Name("date").TypeConverter<DateTimeConverter>();
-            Map(m => m.Type).Name("type");
-            Map(m => m.Tags).Name("tags").TypeConverter<TagsConverter>();
-        }
-    }
-
-    internal class DecimalConverter : ITypeConverter
-    {
-        public object ConvertFromString(string text, IReaderRow row, MemberMapData metadata)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return 0m;
-
-            text = text.Trim().Replace("$", "").Replace("€", "").Replace(" ", "");
-
-            if (decimal.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
+            catch (Exception ex)
             {
-                return result;
+                _logger.LogError($"Unexpected error reading the file: {ex.Message}");
+                throw new InvalidOperationException("Failed to upload transactions.", ex);
             }
-            return 0m;
         }
 
-        public string ConvertToString(object value, IWriterRow row, MemberMapData metadata)
-        {
-            return value?.ToString() ?? "0";
-        }
+        return transactions;
     }
 
-    internal class DateTimeConverter : ITypeConverter
+    private decimal ParseAmount(string amountText)
     {
-        public object ConvertFromString(string text, IReaderRow row, MemberMapData metadata)
+        if (string.IsNullOrWhiteSpace(amountText)) return 0m;
+
+        // Remove unwanted characters like $ or commas
+        amountText = amountText.Replace("$", "").Replace("€", "").Replace(",", "").Trim();
+
+        if (decimal.TryParse(amountText, NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
         {
-            if (string.IsNullOrWhiteSpace(text)) return DateTime.MinValue;
-
-            string[] formats = {
-                "yyyy-MM-dd",
-                "MM/dd/yyyy",
-                "dd/MM/yyyy",
-                "yyyy/MM/dd",
-                "MM-dd-yyyy",
-                "dd-MM-yyyy"
-            };
-
-            if (DateTime.TryParse(text.Trim(), CultureInfo.InvariantCulture,
-                DateTimeStyles.None, out DateTime result))
-            {
-                return result;
-            }
-
-            return DateTime.MinValue;
+            return result;
         }
 
-        public string ConvertToString(object value, IWriterRow row, MemberMapData metadata)
-        {
-            return value is DateTime date ? date.ToString("yyyy-MM-dd") : "";
-        }
+        throw new FormatException($"Invalid amount format: {amountText}");
     }
 
-    internal class TagsConverter : ITypeConverter
+    private DateTime? ParseDate(string dateText)
     {
-        public object ConvertFromString(string text, IReaderRow row, MemberMapData metadata)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return "";
+        if (string.IsNullOrWhiteSpace(dateText)) return null;
 
-            // Remove quotes if present and split by comma
-            text = text.Trim('"');
-            return text.Trim();
+        string[] formats = {
+            "yyyy-MM-dd",
+            "MM/dd/yyyy",
+            "dd/MM/yyyy",
+            "yyyy/MM/dd",
+            "MM-dd-yyyy",
+            "dd-MM-yyyy"
+        };
+
+        if (DateTime.TryParseExact(dateText.Trim(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime result))
+        {
+            return result;
         }
 
-        public string ConvertToString(object value, IWriterRow row, MemberMapData metadata)
-        {
-            return value?.ToString() ?? "";
-        }
+        // Return null if parsing fails
+        throw new FormatException($"Invalid date format: {dateText}");
+    }
+
+    private List<string> ParseTags(string tagsText)
+    {
+        if (string.IsNullOrWhiteSpace(tagsText)) return new List<string>();
+
+        return tagsText.Split(',').Select(tag => tag.Trim()).ToList();
     }
 }

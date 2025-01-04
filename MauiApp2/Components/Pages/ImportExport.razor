@@ -49,7 +49,7 @@
                         <tr>
                             <td>@transaction.Title</td>
                             <td>@transaction.Amount</td>
-                            <td>@transaction.Date?.ToShortDateString() ?? "N/A"</td>
+                            <td>@(transaction.Date.HasValue ? transaction.Date.Value.ToString("MM/dd/yyyy") : "N/A")</td>
                             <td>@transaction.Type</td>
                             <td>@string.Join(", ", transaction.Tags)</td>
                         </tr>
@@ -106,10 +106,7 @@
             }
 
             // Call the FileUploadService to process the CSV file with the current username
-            await FileUploadService.ProcessCsvFileAsync(selectedFile, currentUsername);
-
-            // Simulate processing and fetching transactions
-            importedTransactions = await GetTransactionsFromFile(selectedFile);  // Replace with actual logic to fetch transactions
+            importedTransactions = await FileUploadService.ProcessCsvFileAsync(selectedFile, currentUsername);
         }
         catch (Exception ex)
         {
@@ -119,11 +116,5 @@
         {
             isProcessing = false;
         }
-    }
-
-    private Task<List<Transaction>> GetTransactionsFromFile(IBrowserFile file)
-    {
-        // In real-world scenario, this should return the list of transactions from the file processing
-        return Task.FromResult(importedTransactions);
     }
 }
