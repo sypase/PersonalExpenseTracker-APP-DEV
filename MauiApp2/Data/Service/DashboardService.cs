@@ -17,7 +17,7 @@ namespace MauiApp2.Data.Service
             _debtService = debtService;
         }
 
-        // Display total number of transactions and total transactions (inflows + debts - outflows)
+        // Get total number of transactions and total transaction amount (inflows + debts - outflows)
         public async Task<(int totalTransactions, decimal totalTransactionAmount)> GetTotalTransactionsAsync(string username)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
@@ -29,12 +29,12 @@ namespace MauiApp2.Data.Service
             return (totalTransactions, totalTransactionAmount);
         }
 
-        // Display total inflows, outflows, debt, cleared debt, remaining debt
+        // Get total inflows, outflows, debt, cleared debt, and remaining debt
         public async Task<(decimal totalInflows, decimal totalOutflows, decimal totalDebt, decimal clearedDebt, decimal remainingDebt)> GetTransactionSummaryAsync(string username)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
-            var totalInflows = transactions.Where(t => t.Type.Equals("credit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
-            var totalOutflows = transactions.Where(t => t.Type.Equals("debit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
+            var totalInflows = transactions.Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
+            var totalOutflows = transactions.Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
 
             var debts = await _debtService.GetDebtsAsync(username);
             var totalDebt = debts.Sum(d => d.AmountOwed);
@@ -44,19 +44,19 @@ namespace MauiApp2.Data.Service
             return (totalInflows, totalOutflows, totalDebt, clearedDebt, remainingDebt);
         }
 
-        // Display highest and lowest inflow, outflow, and debt transactions
+        // Get highest and lowest inflow, outflow, and debt transactions
         public async Task<(Transaction highestInflow, Transaction lowestInflow, Transaction highestOutflow, Transaction lowestOutflow, Debt highestDebt, Debt lowestDebt)> GetHighestAndLowestTransactionsAsync(string username)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
             var debts = await _debtService.GetDebtsAsync(username);
 
-            var highestInflow = transactions.Where(t => t.Type.Equals("credit", StringComparison.OrdinalIgnoreCase))
+            var highestInflow = transactions.Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
                                             .OrderByDescending(t => t.Amount).FirstOrDefault();
-            var lowestInflow = transactions.Where(t => t.Type.Equals("credit", StringComparison.OrdinalIgnoreCase))
+            var lowestInflow = transactions.Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
                                            .OrderBy(t => t.Amount).FirstOrDefault();
-            var highestOutflow = transactions.Where(t => t.Type.Equals("debit", StringComparison.OrdinalIgnoreCase))
+            var highestOutflow = transactions.Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
                                            .OrderByDescending(t => t.Amount).FirstOrDefault();
-            var lowestOutflow = transactions.Where(t => t.Type.Equals("debit", StringComparison.OrdinalIgnoreCase))
+            var lowestOutflow = transactions.Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
                                           .OrderBy(t => t.Amount).FirstOrDefault();
 
             var highestDebt = debts.OrderByDescending(d => d.AmountOwed).FirstOrDefault();
@@ -65,36 +65,41 @@ namespace MauiApp2.Data.Service
             return (highestInflow, lowestInflow, highestOutflow, lowestOutflow, highestDebt, lowestDebt);
         }
 
-        // Properly listing pending debts in the dashboard
+        // Get pending debts for the dashboard
         public async Task<List<Debt>> GetPendingDebtsAsync(string username)
         {
             var debts = await _debtService.GetDebtsAsync(username);
             return debts.Where(d => !d.IsCleared && d.DueDate > DateTime.Now).OrderBy(d => d.DueDate).ToList();
         }
 
-        // Dashboard filtering by specific date ranges
+        // Filter transactions by date range
         public async Task<List<Transaction>> FilterTransactionsByDateAsync(string username, DateTime startDate, DateTime endDate)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
             return transactions.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
         }
 
-        // Basic Donut and Linechart calculations (Categorizing by 'credit' and 'debit' types)
+        // Get category-wise transaction summary for donut chart
         public async Task<Dictionary<string, decimal>> GetCategoryWiseTransactionSummaryAsync(string username)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
             var categorySummary = transactions
-                .GroupBy(t => t.Type) // Grouping by 'credit' and 'debit' types
+                .GroupBy(t => t.Type) // Group by 'Credit' and 'Debit'
                 .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
 
             return categorySummary;
         }
 
-        // For creating charts, such as pie or line charts based on transaction amounts by date
-        public async Task<List<Transaction>> GetTransactionsForChartAsync(string username, DateTime startDate, DateTime endDate)
+        // Get transactions for line chart (grouped by date)
+        public async Task<Dictionary<DateTime, decimal>> GetTransactionsForLineChartAsync(string username, DateTime startDate, DateTime endDate)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
-            return transactions.Where(t => t.Date >= startDate && t.Date <= endDate).ToList();
+            var filteredTransactions = transactions
+                .Where(t => t.Date.HasValue && t.Date.Value >= startDate && t.Date.Value <= endDate)
+                .GroupBy(t => t.Date.Value.Date) // Use .Value to access the non-nullable DateTime
+                .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
+
+            return filteredTransactions;
         }
     }
 }

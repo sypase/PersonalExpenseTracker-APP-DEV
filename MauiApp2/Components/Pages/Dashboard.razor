@@ -1,14 +1,12 @@
 ﻿@page "/dashboard"
 @using MauiApp2.Data.Service
 @using MauiApp2.Data.Models
-
-@inject DashboardService DashboardService
-@inject IJSRuntime JSRuntime
-
-@* Add necessary CSS for MudBlazor charts *@
 @using MudBlazor
 @using System.Linq
 @using System.Threading.Tasks
+
+@inject DashboardService DashboardService
+@inject IJSRuntime JSRuntime
 
 <MudContainer>
     <MudGrid>
@@ -43,21 +41,17 @@
 
         <!-- Donut Chart: Credit vs Debit -->
         <MudItem xs="12" md="6">
-            <MudCard>
-                <MudCardHeader>
-                    <MudText Typo="Typo.h6">Credit vs Debit (Donut Chart)</MudText>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart Type="ChartType.Doughnut" Data="@donutData" Options="@donutChartOptions" />
-                </MudCardContent>
-            </MudCard>
+            <MudPaper Class="pa-4">
+                <MudChart ChartType="ChartType.Donut" Width="300px" Height="300px" InputData="@donutChartData" InputLabels="@donutChartLabels"></MudChart>
+            </MudPaper>
+            <MudText Typo="Typo.h6" Class="mt-2">Credit vs Debit</MudText>
         </MudItem>
 
         <!-- Line Chart: Transactions Over Time -->
         <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
-                    <MudText Typo="Typo.h6">Transactions Over Time (Line Chart)</MudText>
+                    <MudText Typo="Typo.h6">Transactions Over Time</MudText>
                 </MudCardHeader>
                 <MudCardContent>
                     <MudChart Type="ChartType.Line" Data="@lineChartData" Options="@lineChartOptions" />
@@ -67,29 +61,29 @@
     </MudGrid>
 
     <!-- Pending Debts -->
-    <MudCard>
+    <MudCard Class="mt-4">
         <MudCardHeader>
             <MudText Typo="Typo.h6">Pending Debts</MudText>
         </MudCardHeader>
         <MudCardContent>
             @if (pendingDebts.Any())
             {
-                    <MudTable Items="pendingDebts" Hover="true" Bordered="true" Striped="true">
-                        <HeaderContent>
-                            <MudTh>Creditor</MudTh>
-                            <MudTh>Amount Owed</MudTh>
-                            <MudTh>Due Date</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Creditor">@context.Creditor</MudTd>
-                            <MudTd DataLabel="Amount Owed">@context.AmountOwed.ToString("C")</MudTd>
-                            <MudTd DataLabel="Due Date">@context.DueDate.ToShortDateString()</MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                <MudTable Items="pendingDebts" Hover="true" Bordered="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Creditor</MudTh>
+                        <MudTh>Amount Owed</MudTh>
+                        <MudTh>Due Date</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Creditor">@context.Creditor</MudTd>
+                        <MudTd DataLabel="Amount Owed">@context.AmountOwed.ToString("C")</MudTd>
+                        <MudTd DataLabel="Due Date">@context.DueDate.ToShortDateString()</MudTd>
+                    </RowTemplate>
+                </MudTable>
             }
             else
             {
-                    <MudText Typo="Typo.body1">No pending debts.</MudText>
+                <MudText Typo="Typo.body1">No pending debts.</MudText>
             }
         </MudCardContent>
     </MudCard>
@@ -102,11 +96,13 @@
     private decimal remainingDebt;
 
     private List<Debt> pendingDebts = new List<Debt>();
-    private object donutData;
-    private object donutChartOptions;
     private object lineChartData;
     private object lineChartOptions;
     private string userName;
+
+    // Donut Chart Data
+    private double[] donutChartData;
+    private string[] donutChartLabels = { "Credit", "Debit" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,42 +120,21 @@
         pendingDebts = await DashboardService.GetPendingDebtsAsync(userName);
 
         // Prepare Donut Chart Data
-        donutData = new
-        {
-            labels = new[] { "Inflows", "Outflows" },
-            datasets = new[]
-            {
-                new {
-                    data = new[] { totalInflows, totalOutflows },
-                    backgroundColor = new[] { "#36A2EB", "#FF6384" }
-                }
-            }
-        };
+        var categorySummary = await DashboardService.GetCategoryWiseTransactionSummaryAsync(userName);
+        donutChartData = new double[] { (double)categorySummary["Credit"], (double)categorySummary["Debit"] };
 
-        donutChartOptions = new
-        {
-            responsive = true,
-            plugins = new { legend = new { position = "top" } }
-        };
-
-        // Prepare Line Chart Data (Dummy for now, replace with actual transactions)
+        // Prepare Line Chart Data
+        var lineChartTransactions = await DashboardService.GetTransactionsForLineChartAsync(userName, DateTime.Now.AddMonths(-6), DateTime.Now);
         lineChartData = new
         {
-            labels = new[] { "January", "February", "March", "April", "May", "June" },
+            labels = lineChartTransactions.Keys.Select(d => d.ToShortDateString()).ToArray(),
             datasets = new[]
             {
                 new {
-                    label = "Inflows",
-                    data = new[] { 1200, 1500, 1800, 2000, 1700, 1900 },
+                    label = "Transactions",
+                    data = lineChartTransactions.Values.Select(v => (double)v).ToArray(),
                     fill = false,
                     borderColor = "#36A2EB",
-                    tension = 0.1
-                },
-                new {
-                    label = "Outflows",
-                    data = new[] { 800, 1000, 1300, 1400, 1200, 1500 },
-                    fill = false,
-                    borderColor = "#FF6384",
                     tension = 0.1
                 }
             }
