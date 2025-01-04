@@ -1,0 +1,245 @@
+﻿@page "/detailed-transactions"
+@using MauiApp2.Data.Models
+@using MauiApp2.Data.Service
+@inject TransactionService TransactionService
+@inject IJSRuntime JS
+@inject IDialogService DialogService
+@using MudBlazor
+
+<h3>Detailed Transactions</h3>
+
+<!-- Search and Filters -->
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudTextField @bind-Value="searchQuery" Label="Search by Title or Notes" Immediate="true" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudSelect T="string" @bind-Value="typeFilter" Label="Filter by Type">
+                <MudSelectItem Value="@string.Empty">All</MudSelectItem>
+                @foreach (var type in transactionTypes)
+                {
+                    <MudSelectItem Value="@type">@type</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudSelect T="string" @bind-Value="selectedTagFilter" Label="Filter by Tag">
+                <MudSelectItem Value="@string.Empty">All</MudSelectItem>
+                @foreach (var tag in availableTags)
+                {
+                    <MudSelectItem Value="@tag">@tag</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudDatePicker @bind-Date="startDate" Label="Start Date" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudDatePicker @bind-Date="endDate" Label="End Date" />
+        </MudItem>
+ @*        <MudItem xs="12" sm="6" md="4">
+            <MudSelect T="string" @bind-Value="sortBy" Label="Sort By">
+                <MudSelectItem Value="Title">Title</MudSelectItem>
+                <MudSelectItem Value="Amount">Amount</MudSelectItem>
+                <MudSelectItem Value="Date">Date</MudSelectItem>
+            </MudSelect>
+        </MudItem> *@
+        <MudItem xs="12" sm="6" md="4">
+            <MudSwitch T="bool" @bind-Checked="ascending" Label="Ascending" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudButton OnClick="ApplyFilters" Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">Apply Filters</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Transactions Table -->
+@if (filteredTransactions != null && filteredTransactions.Any())
+{
+    <MudTable Items="filteredTransactions" Hover="true" Class="mt-4">
+        <HeaderContent>
+            <MudTh>Title</MudTh>
+            <MudTh>Amount</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Tags</MudTh>
+            <MudTh>Notes</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+            <MudTd DataLabel="Amount">@FormatCurrency(context.Amount)</MudTd>
+            <MudTd DataLabel="Date">@context.Date?.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Type">@context.Type</MudTd>
+            <MudTd DataLabel="Tags">@string.Join(", ", context.Tags)</MudTd>
+            <MudTd DataLabel="Notes">@context.Notes</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton OnClick="() => EditTransaction(context)" Color="Color.Primary"
+                           Variant="Variant.Filled" Size="Size.Small">Edit</MudButton>
+                <MudButton OnClick="() => DeleteTransaction(context.Title)" Color="Color.Error"
+                           Variant="Variant.Filled" Size="Size.Small" Class="ml-2">Delete</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">No transactions found.</MudAlert>
+}
+
+@code {
+    private List<Transaction> transactions = new();
+    private List<Transaction> filteredTransactions = new();
+    private string searchQuery = string.Empty;
+    private string typeFilter = string.Empty;
+    private string selectedTagFilter = string.Empty;
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private string sortBy = "Date";
+    private bool ascending = true;
+    private string currentUser = string.Empty;
+
+    // Define available transaction types and tags
+    private readonly List<string> transactionTypes = new()
+    {
+        "Credit",
+        "Debit"
+    };
+
+    private readonly List<string> availableTags = new()
+    {
+        "Yearly",
+        "Monthly",
+        "Food",
+        "Drinks",
+        "Transportation",
+        "Entertainment",
+        "Shopping",
+        "Bills",
+        "Other"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        if (!string.IsNullOrEmpty(currentUser))
+        {
+            await LoadTransactions();
+        }
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        return amount.ToString("C", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    private async Task LoadTransactions()
+    {
+        if (!string.IsNullOrEmpty(currentUser))
+        {
+            transactions = await TransactionService.GetTransactionsAsync(currentUser);
+            ApplyFilters();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = transactions.AsQueryable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            query = query.Where(t =>
+                t.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                t.Notes.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply type filter
+        if (!string.IsNullOrEmpty(typeFilter))
+        {
+            query = query.Where(t => t.Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply tag filter
+        if (!string.IsNullOrEmpty(selectedTagFilter))
+        {
+            query = query.Where(t => t.Tags.Contains(selectedTagFilter, StringComparer.OrdinalIgnoreCase));
+        }
+
+        // Apply date filters
+        if (startDate.HasValue)
+        {
+            query = query.Where(t => t.Date.HasValue && t.Date.Value >= startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(t => t.Date.HasValue && t.Date.Value <= endDate.Value);
+        }
+
+        // Apply sorting
+        var orderedQuery = sortBy switch
+        {
+            "Title" => ascending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title),
+            "Amount" => ascending ? query.OrderBy(t => t.Amount) : query.OrderByDescending(t => t.Amount),
+            _ => ascending ? query.OrderBy(t => t.Date) : query.OrderByDescending(t => t.Date)
+        };
+
+        filteredTransactions = orderedQuery.ToList();
+    }
+
+    private async Task EditTransaction(Transaction transaction)
+    {
+        if (string.IsNullOrEmpty(currentUser)) return;
+
+        try
+        {
+            await TransactionService.UpdateTransactionAsync(transaction, currentUser);
+            await LoadTransactions();
+            await DialogService.ShowMessageBox(
+                "Success",
+                "Transaction updated successfully!",
+                yesText: "OK");
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox(
+                "Error",
+                $"Failed to update transaction: {ex.Message}",
+                yesText: "OK");
+        }
+    }
+
+    private async Task DeleteTransaction(string title)
+    {
+        if (string.IsNullOrEmpty(currentUser)) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            "Are you sure you want to delete this transaction?",
+            yesText: "Delete",
+            noText: "Cancel"
+        );
+
+        if (result ?? false)
+        {
+            try
+            {
+                await TransactionService.DeleteTransactionAsync(title, currentUser);
+                await LoadTransactions();
+                await DialogService.ShowMessageBox(
+                    "Success",
+                    "Transaction deleted successfully!",
+                    yesText: "OK");
+            }
+            catch (Exception ex)
+            {
+                await DialogService.ShowMessageBox(
+                    "Error",
+                    $"Failed to delete transaction: {ex.Message}",
+                    yesText: "OK");
+            }
+        }
+    }
+}

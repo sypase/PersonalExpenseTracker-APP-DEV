@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace MauiApp2.Data.Models
 {
-    internal class Transaction
+    public class Transaction // Change from `internal` to `public`
     {
         public string Title { get; set; }
         public decimal Amount { get; set; }
@@ -20,7 +20,7 @@ namespace MauiApp2.Data.Models
             Date = date;
             Type = type;
             Tags = tags;
-            Notes = notes; 
+            Notes = notes;
             RefUsername = refUsername;
         }
     }

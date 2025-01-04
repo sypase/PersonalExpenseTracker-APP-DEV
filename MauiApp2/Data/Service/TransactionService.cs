@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using CsvHelper;
 using System.Globalization;
@@ -167,6 +166,85 @@ namespace MauiApp2.Data.Service
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error uploading transactions for user '{refUsername}'");
+            }
+        }
+
+        // Search, filter, and sort transactions
+        public async Task<List<Transaction>> SearchFilterAndSortTransactionsAsync(
+            string refUsername,
+            string searchQuery = null,
+            string typeFilter = null,
+            List<string> tagFilters = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            string sortBy = "Date",
+            bool ascending = true)
+        {
+            try
+            {
+                // Get all transactions for the user
+                var transactions = await GetTransactionsAsync(refUsername);
+
+                // Apply search filter (by title or notes)
+                if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    transactions = transactions
+                        .Where(t => t.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                    t.Notes.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
+                // Apply type filter
+                if (!string.IsNullOrEmpty(typeFilter))
+                {
+                    transactions = transactions
+                        .Where(t => t.Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
+                // Apply tag filters
+                if (tagFilters != null && tagFilters.Any())
+                {
+                    transactions = transactions
+                        .Where(t => t.Tags != null && t.Tags.Any(tag => tagFilters.Contains(tag, StringComparer.OrdinalIgnoreCase)))
+                        .ToList();
+                }
+
+                // Apply date range filter
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    transactions = transactions
+                        .Where(t => t.Date >= startDate.Value && t.Date <= endDate.Value)
+                        .ToList();
+                }
+
+                // Apply sorting
+                switch (sortBy.ToLower())
+                {
+                    case "title":
+                        transactions = ascending
+                            ? transactions.OrderBy(t => t.Title).ToList()
+                            : transactions.OrderByDescending(t => t.Title).ToList();
+                        break;
+                    case "amount":
+                        transactions = ascending
+                            ? transactions.OrderBy(t => t.Amount).ToList()
+                            : transactions.OrderByDescending(t => t.Amount).ToList();
+                        break;
+                    case "date":
+                    default:
+                        transactions = ascending
+                            ? transactions.OrderBy(t => t.Date).ToList()
+                            : transactions.OrderByDescending(t => t.Date).ToList();
+                        break;
+                }
+
+                return transactions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error searching, filtering, or sorting transactions for user '{refUsername}'");
+                return new List<Transaction>();
             }
         }
     }
