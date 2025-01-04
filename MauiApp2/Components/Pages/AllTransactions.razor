@@ -38,13 +38,6 @@
         <MudItem xs="12" sm="6" md="4">
             <MudDatePicker @bind-Date="endDate" Label="End Date" />
         </MudItem>
- @*        <MudItem xs="12" sm="6" md="4">
-            <MudSelect T="string" @bind-Value="sortBy" Label="Sort By">
-                <MudSelectItem Value="Title">Title</MudSelectItem>
-                <MudSelectItem Value="Amount">Amount</MudSelectItem>
-                <MudSelectItem Value="Date">Date</MudSelectItem>
-            </MudSelect>
-        </MudItem> *@
         <MudItem xs="12" sm="6" md="4">
             <MudSwitch T="bool" @bind-Checked="ascending" Label="Ascending" />
         </MudItem>
@@ -53,6 +46,28 @@
         </MudItem>
     </MudGrid>
 </MudPaper>
+
+<!-- Sorting Dropdown with Ascending/Descending Toggle -->
+<MudGrid Class="mt-4">
+    <MudItem xs="12" sm="6" md="4">
+        <MudSelect T="int" @bind-Value="sortOption" Label="Sort By" Immediate="true">
+            <MudSelectItem Value="1">Title</MudSelectItem>
+            <MudSelectItem Value="2">Amount</MudSelectItem>
+            <MudSelectItem Value="3">Date</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+        <MudSelect T="bool" @bind-Value="ascending" Label="Order">
+            <MudSelectItem Value="true">Ascending</MudSelectItem>
+            <MudSelectItem Value="false">Descending</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+        <MudButton OnClick="ApplySort" Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">Apply Sort</MudButton>
+    </MudItem>
+</MudGrid>
 
 <!-- Transactions Table -->
 @if (filteredTransactions != null && filteredTransactions.Any())
@@ -96,9 +111,9 @@ else
     private string selectedTagFilter = string.Empty;
     private DateTime? startDate;
     private DateTime? endDate;
-    private string sortBy = "Date";
     private bool ascending = true;
     private string currentUser = string.Empty;
+    private int sortOption = 1; // Default to Title sorting
 
     // Define available transaction types and tags
     private readonly List<string> transactionTypes = new()
@@ -178,15 +193,27 @@ else
             query = query.Where(t => t.Date.HasValue && t.Date.Value <= endDate.Value);
         }
 
-        // Apply sorting
-        var orderedQuery = sortBy switch
-        {
-            "Title" => ascending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title),
-            "Amount" => ascending ? query.OrderBy(t => t.Amount) : query.OrderByDescending(t => t.Amount),
-            _ => ascending ? query.OrderBy(t => t.Date) : query.OrderByDescending(t => t.Date)
-        };
+        filteredTransactions = query.ToList();
+    }
 
-        filteredTransactions = orderedQuery.ToList();
+    private void ApplySort()
+    {
+        var query = filteredTransactions.AsQueryable();
+
+        switch (sortOption)
+        {
+            case 1:
+                query = ascending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title);
+                break;
+            case 2:
+                query = ascending ? query.OrderBy(t => t.Amount) : query.OrderByDescending(t => t.Amount);
+                break;
+            case 3:
+                query = ascending ? query.OrderBy(t => t.Date) : query.OrderByDescending(t => t.Date);
+                break;
+        }
+
+        filteredTransactions = query.ToList();
     }
 
     private async Task EditTransaction(Transaction transaction)
