@@ -27,6 +27,24 @@
     <script src="_framework/blazor.webview.js" autostart="false"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script> <!-- Add this line -->
 
+    <script>
+    function downloadCsv(filename, content) {
+        // Create a Blob with the CSV content
+        const blob = new Blob([content], { type: 'text/csv' });
+
+        // Create a link element
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+
+        // Trigger the download
+        link.click();
+
+        // Clean up
+        URL.revokeObjectURL(link.href);
+    }
+    </script>
+
 </body>
 
 </html>

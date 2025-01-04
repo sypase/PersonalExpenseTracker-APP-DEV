@@ -21,9 +21,16 @@
         <MudNavLink Href="/debt" Icon="@Icons.Material.Filled.MoneyOff">
             Debt
         </MudNavLink>
-        <MudNavLink Href="/importexport" Icon="@Icons.Material.Filled.ImportExport">
-            Import/Export
-        </MudNavLink>
+
+        <!-- Import/Export Section with sub-links -->
+        <MudNavGroup Title="Import/Export" Icon="@Icons.Material.Filled.ImportExport" Expanded="true">
+            <MudNavLink Href="/import" Icon="@Icons.Material.Filled.Upload">
+                Import
+            </MudNavLink>
+            <MudNavLink Href="/export" Icon="@Icons.Material.Filled.Download">
+                Export
+            </MudNavLink>
+        </MudNavGroup>
 
         <!-- Settings Section -->
         <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings" Expanded="true">
