@@ -62,11 +62,11 @@
                             Login
                         </MudButton>
 
-                        <!-- Error Message -->
-                        @if (!string.IsNullOrEmpty(errorMessage))
+                        <!-- Success or Error Message -->
+                        @if (!string.IsNullOrEmpty(alertMessage))
                         {
-                                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
-                                @errorMessage
+                                <MudAlert Severity="@alertSeverity" Variant="Variant.Filled" Class="mt-3">
+                                @alertMessage
                                 </MudAlert>
                         }
                     </EditForm>
@@ -161,28 +161,31 @@
     }
 
     private LoginModel loginModel = new LoginModel();
-    private string errorMessage = string.Empty;
+    private string alertMessage = string.Empty;
+    private Severity alertSeverity = Severity.Error; // Default to error severity
 
     private async Task HandleValidSubmit()
     {
         try
         {
-            // Clear any previous error messages
-            errorMessage = string.Empty;
+            // Clear any previous alert messages
+            alertMessage = string.Empty;
 
             // Get user from database
             var user = await UserService.GetUserAsync(loginModel.Username);
 
             if (user == null)
             {
-                errorMessage = "Invalid username or password";
+                alertMessage = "Invalid username or password";
+                alertSeverity = Severity.Error;
                 return;
             }
 
             // Validate password
             if (!UserService.ValidateUser(user, loginModel.Password))
             {
-                errorMessage = "Invalid username or password";
+                alertMessage = "Invalid username or password";
+                alertSeverity = Severity.Error;
                 return;
             }
 
@@ -190,14 +193,18 @@
             await JS.InvokeVoidAsync("localStorage.setItem", "currentUser", user.Username);
             await JS.InvokeVoidAsync("localStorage.setItem", "userCurrency", user.Currency);
 
-            // Redirect to main page or dashboard
-            // Navigation.NavigateTo("/dashboard");
-            await JS.InvokeVoidAsync("eval", "window.location.reload();");
+            // Show success message
+            alertMessage = "Login successful! Redirecting...";
+            alertSeverity = Severity.Success;
 
+            // Redirect to main page or dashboard after a short delay
+            await Task.Delay(2000); // 2 seconds delay
+            Navigation.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
         {
-            errorMessage = $"Login error: {ex.Message}";
+            alertMessage = $"Login error: {ex.Message}";
+            alertSeverity = Severity.Error;
         }
     }
 }

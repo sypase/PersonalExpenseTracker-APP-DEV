@@ -8,80 +8,49 @@
 @inject IJSRuntime JS
 @using System.Text.Json
 
-<MudPaper Class="d-flex justify-center align-center" Style="min-height: 100vh; background-color: #f4f6f8;">
-    <MudContainer MaxWidth="MaxWidth.Small">
-        <MudCard>
-            <MudCardContent>
-                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">
-                    Create Your Account
+<PageTitle>Expense Tracker</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="d-flex align-center justify-center" Style="height: 80vh;">
+    <MudPaper Elevation="5" Class="pa-6" Style="max-width: 600px; width: 100%;">
+        <MudGrid>
+            <!-- Welcome Message -->
+            <MudItem xs="12" Class="text-center">
+                <MudText Typo="Typo.h3" GutterBottom="true" Class="mb-4">Welcome to Expense Tracker</MudText>
+                <MudText Typo="Typo.body1" GutterBottom="true" Class="mb-4">
+                    Here you can manage your finances, track expenses, and stay on top of your budget.
                 </MudText>
-                <EditForm Model="@newUser" OnValidSubmit="HandleValidSubmit">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-                    <!-- Username -->
-                    <MudTextField @bind-Value="newUser.Username" Label="Username" Required="true" Variant="Variant.Filled" FullWidth="true" />
-                    <!-- Password -->
-                    <MudTextField @bind-Value="newUser.Password" Label="Password" InputType="InputType.Password" Required="true" Variant="Variant.Filled" FullWidth="true" />
-                    <!-- Currency Selection (Dropdown) -->
-                    <MudSelect T="string" @bind-Value="newUser.Currency" Label="Currency" Required="true" Variant="Variant.Filled" FullWidth="true">
-                        <MudSelectItem Value="@("USD")">USD</MudSelectItem>
-                        <MudSelectItem Value="@("NPR")">NPR</MudSelectItem>
-                    </MudSelect>
-                    <!-- Sign Up Button -->
-                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="mt-4">
-                        Sign Up
-                    </MudButton>
-                    <!-- Error Message -->
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-3">
-                            @errorMessage
-                        </MudAlert>
-                    }
-                    <!-- Success Message -->
-                    @if (isRegistrationSuccessful)
-                    {
-                        <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mt-3">
-                            Registration Successful! Redirecting to login page...
-                        </MudAlert>
-                    }
-                </EditForm>
-            </MudCardContent>
-        </MudCard>
-        <!-- Already Have Account -->
-        <MudText Align="Align.Center" Class="mt-3">
-            Already have an account? <MudLink Href="/login" Color="Color.Primary">Login here</MudLink>
-        </MudText>
-    </MudContainer>
-</MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
 
 @code {
-    private User newUser = new User(string.Empty, string.Empty, string.Empty);
-    private string errorMessage;
-    private bool isRegistrationSuccessful = false;
-
-    private async Task HandleValidSubmit()
+    protected override async Task OnInitializedAsync()
     {
-        try
+        // Check if the user is logged in
+        var currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+
+        if (string.IsNullOrEmpty(currentUser))
         {
-            // Check if the username already exists
-            var existingUser = await UserService.GetUserAsync(newUser.Username);
-            if (existingUser != null)
-            {
-                errorMessage = "Username already exists!";
-                return;
-            }
-            // Register the new user
-            await UserService.RegisterUser(newUser);
-            // Set the success flag
-            isRegistrationSuccessful = true;
-            // Redirect to the login page after a brief delay
-            await Task.Delay(2000); // Delay for 2 seconds to show the success message
-            Navigation.NavigateTo("/login");
+            // Redirect to the signup page if the user is not logged in
+            Navigation.NavigateTo("/signup");
         }
-        catch (Exception ex)
+        else
         {
-            errorMessage = $"Error: {ex.Message}";
+            // Fetch user data
+            var user = await UserService.GetUserAsync(currentUser);
+
+            if (user != null)
+            {
+                // Store user data in localStorage
+                await JS.InvokeVoidAsync("localStorage.setItem", "currentUser", user.Username);
+                await JS.InvokeVoidAsync("localStorage.setItem", "userCurrency", user.Currency);
+            }
+            else
+            {
+                // Redirect to the signup page if the user is not found
+                Navigation.NavigateTo("/signup");
+            }
         }
     }
 }

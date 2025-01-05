@@ -92,6 +92,8 @@
             await UserService.RegisterUser(newUser);
             // Set the success flag
             isRegistrationSuccessful = true;
+            // Show a browser alert dialog
+            await JS.InvokeVoidAsync("alert", "Registration Successful! Redirecting to login page...");
             // Redirect to the login page after a brief delay
             await Task.Delay(2000); // Delay for 2 seconds to show the success message
             Navigation.NavigateTo("/login");
