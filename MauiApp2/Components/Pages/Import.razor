@@ -10,47 +10,71 @@
 
 <PageTitle>Import/Export</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large">
-    <MudText Typo="Typo.h4" Align="Align.Center">Import Transactions from CSV</MudText>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true" Class="mb-6">Import Transactions from CSV</MudText>
 
-    <MudPaper Class="pa-4" MaxWidth="MaxWidth.Small" AlignItems="Align.Center">
-        <MudText Typo="Typo.subtitle1">Upload your CSV file to import transactions.</MudText>
+    <MudPaper Class="pa-6" Elevation="5" Style="max-width: 600px; margin: 0 auto;">
+        <MudText Typo="Typo.subtitle1" GutterBottom="true">Upload your CSV file to import transactions.</MudText>
 
-        <!-- Use Blazor InputFile component -->
-        <InputFile OnChange="OnFileChange" Accept=".csv" />
+        <!-- File Upload Section -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12">
+                <InputFile OnChange="OnFileChange" Accept=".csv" class="mb-3" />
+            </MudItem>
+        </MudGrid>
 
+        <!-- Processing Indicator -->
         @if (isProcessing)
         {
-            <MudLinearProgress Indeterminate="true" />
-            <MudText Typo="Typo.body2">Processing the file...</MudText>
+            <MudGrid Class="mb-4">
+                <MudItem xs="12">
+                    <MudLinearProgress Indeterminate="true" Color="Color.Primary" Class="mb-2" />
+                    <MudText Typo="Typo.body2" Align="Align.Center">Processing the file...</MudText>
+                </MudItem>
+            </MudGrid>
         }
 
+        <!-- Error Message -->
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-            <MudText Color="Color.Error" Typo="Typo.body2">@errorMessage</MudText>
+            <MudGrid Class="mb-4">
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-3">@errorMessage</MudAlert>
+                </MudItem>
+            </MudGrid>
         }
 
-        <MudButton OnClick="SubmitFile" Color="Color.Primary">Submit</MudButton>
+        <!-- Submit Button -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" Class="text-center">
+                <MudButton OnClick="SubmitFile" Color="Color.Primary" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Upload" Disabled="@(selectedFile == null || isProcessing)">
+                    Submit
+                </MudButton>
+            </MudItem>
+        </MudGrid>
 
+        <!-- Imported Transactions Table -->
         @if (importedTransactions.Any())
         {
-            <MudText Typo="Typo.h6">Imported Transactions</MudText>
-            <MudTable Items="importedTransactions" Bordered="true" Hover="true">
-                <HeaderContent>
-                    <MudTh>Title</MudTh>
-                    <MudTh>Amount</MudTh>
-                    <MudTh>Date</MudTh>
-                    <MudTh>Type</MudTh>
-                    <MudTh>Tags</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>@context.Title</MudTd>
-                    <MudTd>@context.Amount</MudTd>
-                    <MudTd>@(context.Date.HasValue ? context.Date.Value.ToString("MM/dd/yyyy") : "N/A")</MudTd>
-                    <MudTd>@context.Type</MudTd>
-                    <MudTd>@string.Join(", ", context.Tags)</MudTd>
-                </RowTemplate>
-            </MudTable>
+            <MudText Typo="Typo.h6" GutterBottom="true" Class="mt-6">Imported Transactions</MudText>
+            <MudPaper Elevation="3" Class="pa-4">
+                <MudTable Items="importedTransactions" Bordered="true" Hover="true" Dense="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Amount</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Tags</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.Title</MudTd>
+                        <MudTd>@context.Amount</MudTd>
+                        <MudTd>@(context.Date.HasValue ? context.Date.Value.ToString("MM/dd/yyyy") : "N/A")</MudTd>
+                        <MudTd>@context.Type</MudTd>
+                        <MudTd>@string.Join(", ", context.Tags)</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
         }
     </MudPaper>
 </MudContainer>

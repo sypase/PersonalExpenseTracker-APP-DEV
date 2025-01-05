@@ -1,4 +1,5 @@
 ﻿@page "/export"
+
 @using MauiApp2.Data.Models
 @using MauiApp2.Data.Service
 @using Microsoft.Extensions.Logging
@@ -6,41 +7,86 @@
 @inject NavigationManager Navigation
 @inject ILogger<Export> Logger
 @inject IJSRuntime JS
+@using MudBlazor
 
-<h3>Export Data</h3>
+<PageTitle>Export Data</PageTitle>
 
-<div>
-    <label for="refUsername">Enter Username to Export Data:</label>
-    <input type="text" id="refUsername" @bind="RefUsername" disabled="@IsUsernameDisabled" />
-</div>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true" Class="mb-6">Export Data</MudText>
 
-<div class="mt-3">
-    <button class="btn btn-primary" @onclick="ExportTransactions" disabled="@IsExportButtonDisabled">Export Transactions</button>
-    <button class="btn btn-secondary" @onclick="ExportDebts" disabled="@IsExportButtonDisabled">Export Debts</button>
-</div>
+    <MudPaper Elevation="5" Class="pa-6" Style="max-width: 600px; margin: 0 auto;">
+        <!-- Username Input -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12">
+                <MudTextField Label="Enter Username to Export Data"
+                              @bind-Value="RefUsername"
+                              Disabled="@IsUsernameDisabled"
+                              Variant="Variant.Outlined"
+                              FullWidth="true" />
+            </MudItem>
+        </MudGrid>
 
-@if (!string.IsNullOrEmpty(ExportContent))
-{
-    <div class="mt-3">
-        <h5>Exported CSV Content:</h5>
-        <pre>@ExportContent</pre>
-        <button class="btn btn-success" @onclick="DownloadCsv">Download CSV</button>
-    </div>
-}
+        <!-- Export Buttons -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" Class="text-center">
+                <MudButton OnClick="ExportTransactions"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           EndIcon="@Icons.Material.Filled.FileDownload"
+                           Disabled="@IsExportButtonDisabled"
+                           Class="mr-3">
+                    Export Transactions
+                </MudButton>
+                <MudButton OnClick="ExportDebts"
+                           Color="Color.Secondary"
+                           Variant="Variant.Filled"
+                           EndIcon="@Icons.Material.Filled.FileDownload"
+                           Disabled="@IsExportButtonDisabled">
+                    Export Debts
+                </MudButton>
+            </MudItem>
+        </MudGrid>
 
-@if (!string.IsNullOrEmpty(ExportError))
-{
-    <div class="mt-3 alert alert-danger">
-        <strong>Error:</strong> @ExportError
-    </div>
-}
+        <!-- Exported CSV Content -->
+        @if (!string.IsNullOrEmpty(ExportContent))
+        {
+            <MudGrid Class="mb-4">
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Exported CSV Content:</MudText>
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <pre style="white-space: pre-wrap; word-wrap: break-word;">@ExportContent</pre>
+                    </MudPaper>
+                    <MudButton OnClick="DownloadCsv"
+                               Color="Color.Success"
+                               Variant="Variant.Filled"
+                               EndIcon="@Icons.Material.Filled.Download"
+                               Class="mt-3">
+                        Download CSV
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        }
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="mt-3 alert alert-warning">
-        <strong>Warning:</strong> @errorMessage
-    </div>
-}
+        <!-- Error Messages -->
+        @if (!string.IsNullOrEmpty(ExportError))
+        {
+            <MudGrid Class="mb-4">
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-3">@ExportError</MudAlert>
+                </MudItem>
+            </MudGrid>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudGrid Class="mb-4">
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mb-3">@errorMessage</MudAlert>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+</MudContainer>
 
 @code {
     private string RefUsername { get; set; }
