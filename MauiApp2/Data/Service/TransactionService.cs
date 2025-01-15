@@ -78,6 +78,18 @@ namespace MauiApp2.Data.Service
         {
             try
             {
+                // Check if the transaction is a debit (outflow)
+                if (transaction.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Ensure sufficient balance
+                    var hasSufficientBalance = await HasSufficientBalanceAsync(refUsername, transaction.Amount);
+                    if (!hasSufficientBalance)
+                    {
+                        throw new InvalidOperationException("Insufficient balance for this transaction.");
+                    }
+                }
+
+                // Proceed to add the transaction
                 var transactions = await GetTransactionsAsync(refUsername);
                 transactions.Add(transaction);
                 await SaveTransactionsAsync(transactions, refUsername);
@@ -85,6 +97,7 @@ namespace MauiApp2.Data.Service
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error adding transaction for user '{refUsername}'");
+                throw; // Re-throw the exception to propagate it
             }
         }
 
@@ -214,7 +227,7 @@ namespace MauiApp2.Data.Service
                 if (startDate.HasValue && endDate.HasValue)
                 {
                     transactions = transactions
-                        .Where(t => t.Date >= startDate.Value && t.Date <= endDate.Value)
+                        .Where(t => t.Date.HasValue && t.Date.Value >= startDate.Value && t.Date.Value <= endDate.Value)
                         .ToList();
                 }
 
@@ -245,6 +258,36 @@ namespace MauiApp2.Data.Service
             {
                 _logger.LogError(ex, $"Error searching, filtering, or sorting transactions for user '{refUsername}'");
                 return new List<Transaction>();
+            }
+        }
+
+        // Check if the user has sufficient balance for an outflow
+        public async Task<bool> HasSufficientBalanceAsync(string refUsername, decimal outflowAmount)
+        {
+            try
+            {
+                // Get all transactions for the user
+                var transactions = await GetTransactionsAsync(refUsername);
+
+                // Calculate total inflows (credits) and outflows (debits)
+                var totalInflows = transactions
+                    .Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount);
+
+                var totalOutflows = transactions
+                    .Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount);
+
+                // Calculate current balance
+                var currentBalance = totalInflows - totalOutflows;
+
+                // Check if the balance is sufficient for the outflow
+                return currentBalance >= outflowAmount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error checking sufficient balance for user '{refUsername}'");
+                throw; // Re-throw the exception to propagate it
             }
         }
     }

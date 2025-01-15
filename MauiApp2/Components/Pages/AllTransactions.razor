@@ -104,7 +104,6 @@ else
 }
 
 @code {
-    private List<Transaction> transactions = new();
     private List<Transaction> filteredTransactions = new();
     private string searchQuery = string.Empty;
     private string typeFilter = string.Empty;
@@ -153,67 +152,38 @@ else
     {
         if (!string.IsNullOrEmpty(currentUser))
         {
-            transactions = await TransactionService.GetTransactionsAsync(currentUser);
-            ApplyFilters();
+            filteredTransactions = await TransactionService.SearchFilterAndSortTransactionsAsync(
+                currentUser,
+                searchQuery,
+                typeFilter,
+                !string.IsNullOrEmpty(selectedTagFilter) ? new List<string> { selectedTagFilter } : null,
+                startDate,
+                endDate,
+                GetSortBy(),
+                ascending
+            );
         }
     }
 
-    private void ApplyFilters()
+    private string GetSortBy()
     {
-        var query = transactions.AsQueryable();
-
-        // Apply search filter
-        if (!string.IsNullOrEmpty(searchQuery))
+        return sortOption switch
         {
-            query = query.Where(t =>
-                t.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                t.Notes.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
-        }
-
-        // Apply type filter
-        if (!string.IsNullOrEmpty(typeFilter))
-        {
-            query = query.Where(t => t.Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase));
-        }
-
-        // Apply tag filter
-        if (!string.IsNullOrEmpty(selectedTagFilter))
-        {
-            query = query.Where(t => t.Tags.Contains(selectedTagFilter, StringComparer.OrdinalIgnoreCase));
-        }
-
-        // Apply date filters
-        if (startDate.HasValue)
-        {
-            query = query.Where(t => t.Date.HasValue && t.Date.Value >= startDate.Value);
-        }
-
-        if (endDate.HasValue)
-        {
-            query = query.Where(t => t.Date.HasValue && t.Date.Value <= endDate.Value);
-        }
-
-        filteredTransactions = query.ToList();
+            1 => "Title",
+            2 => "Amount",
+            3 => "Date",
+            _ => "Date"
+        };
     }
 
-    private void ApplySort()
+    private async Task ApplyFilters()
     {
-        var query = filteredTransactions.AsQueryable();
+        await LoadTransactions();
+    }
 
-        switch (sortOption)
-        {
-            case 1:
-                query = ascending ? query.OrderBy(t => t.Title) : query.OrderByDescending(t => t.Title);
-                break;
-            case 2:
-                query = ascending ? query.OrderBy(t => t.Amount) : query.OrderByDescending(t => t.Amount);
-                break;
-            case 3:
-                query = ascending ? query.OrderBy(t => t.Date) : query.OrderByDescending(t => t.Date);
-                break;
-        }
-
-        filteredTransactions = query.ToList();
+    private async Task ApplySort()
+    {
+        await LoadTransactions();
     }
 
     private async Task EditTransaction(Transaction transaction)

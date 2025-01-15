@@ -38,11 +38,20 @@
                             <MudText Typo="Typo.body1">Remaining Debt:</MudText>
                             <MudText Typo="Typo.h6">@remainingDebt.ToString("C")</MudText>
                         </MudItem>
+                        <!-- Add Balance Display -->
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.body1">Current Balance:</MudText>
+                            <MudText Typo="Typo.h6" Color="@(balance >= 0 ? Color.Success : Color.Error)">
+                                @balance.ToString("C")
+                                <MudIcon Icon="@(balance >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)" Color="@(balance >= 0 ? Color.Success : Color.Error)" />
+                            </MudText>
+                        </MudItem>
                     </MudGrid>
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
+        <!-- Credit vs Debit Donut Chart -->
         <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
@@ -50,7 +59,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudPaper Class="pa-4">
-                        <MudChart ChartType="ChartType.Donut" Width="100%" Height="300px" InputData="@donutChartData" InputLabels="@donutChartLabels"></MudChart>
+                        <MudChart ChartType="ChartType.Donut" Width="100%" Height="300px" InputData="@donutChartData" InputLabels="@donutChartLabels" InputColors="@donutChartColors"></MudChart>
                     </MudPaper>
                     <MudText Typo="Typo.h6" Class="mt-2">Credit vs Debit</MudText>
                 </MudCardContent>
@@ -189,6 +198,7 @@
     private decimal totalOutflows;
     private decimal totalDebt;
     private decimal remainingDebt;
+    private decimal balance; // Add balance field
 
     private List<Debt> pendingDebts = new List<Debt>();
     private string userName;
@@ -198,6 +208,7 @@
     // Donut Chart Data
     private double[] donutChartData;
     private string[] donutChartLabels = { "Credit", "Debit" };
+    private string[] donutChartColors = { "#4CAF50", "#F44336" }; // Green for Credit, Red for Debit
 
     // Highest and Lowest Transactions
     private Transaction highestInflow;
@@ -244,6 +255,9 @@
         totalOutflows = transactionSummary.totalOutflows;
         totalDebt = transactionSummary.totalDebt;
         remainingDebt = transactionSummary.remainingDebt;
+
+        // Calculate balance
+        balance = totalInflows - totalOutflows;
 
         // Get pending debts
         pendingDebts = await DashboardService.GetPendingDebtsAsync(userName);

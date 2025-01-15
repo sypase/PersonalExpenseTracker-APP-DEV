@@ -59,7 +59,7 @@ namespace MauiApp2.Data
         // Load data from a JSON file
         public static async Task<T> LoadFromJsonAsync<T>(string path)
         {
-            try
+            try   
             {
                 if (File.Exists(path))
                 {

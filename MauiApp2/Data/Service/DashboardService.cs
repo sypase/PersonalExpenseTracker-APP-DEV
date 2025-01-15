@@ -32,11 +32,12 @@ namespace MauiApp2.Data.Service
         // Get total inflows, outflows, debt, cleared debt, and remaining debt
         public async Task<(decimal totalInflows, decimal totalOutflows, decimal totalDebt, decimal clearedDebt, decimal remainingDebt)> GetTransactionSummaryAsync(string username)
         {
-            var transactions = await _transactionService.GetTransactionsAsync(username);
+            var transactions = await _transactionService.GetTransactionsAsync(username) ?? new List<Transaction>();
+            var debts = await _debtService.GetDebtsAsync(username) ?? new List<Debt>();
+
             var totalInflows = transactions.Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
             var totalOutflows = transactions.Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
 
-            var debts = await _debtService.GetDebtsAsync(username);
             var totalDebt = debts.Sum(d => d.AmountOwed);
             var clearedDebt = debts.Where(d => d.IsCleared).Sum(d => d.AmountOwed);
             var remainingDebt = debts.Where(d => !d.IsCleared).Sum(d => d.AmountOwed);
@@ -83,9 +84,26 @@ namespace MauiApp2.Data.Service
         public async Task<Dictionary<string, decimal>> GetCategoryWiseTransactionSummaryAsync(string username)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
-            var categorySummary = transactions
-                .GroupBy(t => t.Type) // Group by 'Credit' and 'Debit'
-                .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
+
+            // Initialize the dictionary with default values for "Credit" and "Debit"
+            var categorySummary = new Dictionary<string, decimal>
+            {
+                { "Credit", 0 },
+                { "Debit", 0 }
+            };
+
+            // Populate the dictionary with actual transaction data
+            foreach (var transaction in transactions)
+            {
+                if (transaction.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
+                {
+                    categorySummary["Credit"] += transaction.Amount;
+                }
+                else if (transaction.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
+                {
+                    categorySummary["Debit"] += transaction.Amount;
+                }
+            }
 
             return categorySummary;
         }
