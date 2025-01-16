@@ -113,6 +113,7 @@ else
     private bool ascending = true;
     private string currentUser = string.Empty;
     private int sortOption = 1; // Default to Title sorting
+    private string currency = "USD"; // Default currency
 
     // Define available transaction types and tags
     private readonly List<string> transactionTypes = new()
@@ -137,6 +138,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        currency = await JS.InvokeAsync<string>("localStorage.getItem", "userCurrency") ?? "USD"; // Retrieve currency from localStorage
         if (!string.IsNullOrEmpty(currentUser))
         {
             await LoadTransactions();
@@ -145,7 +147,15 @@ else
 
     private string FormatCurrency(decimal amount)
     {
-        return amount.ToString("C", System.Globalization.CultureInfo.CurrentCulture);
+        if (currency == "NPR")
+        {
+            return $"Rs {amount:N2}"; // Use "Rs" as the symbol for NPR
+        }
+        else
+        {
+            var cultureInfo = new System.Globalization.CultureInfo("en-US"); // Default to USD
+            return amount.ToString("C", cultureInfo); // Use "$" for USD
+        }
     }
 
     private async Task LoadTransactions()

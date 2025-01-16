@@ -60,40 +60,5 @@ namespace MauiApp2.Data.Service
 
             return user.ValidatePassword(inputPassword);
         }
-
-        // Update user currency
-        public async Task UpdateCurrencyAsync(User user, string newCurrency)
-        {
-            if (user != null)
-            {
-                user.UpdateCurrency(newCurrency);
-                await SaveUserAsync(user);
-            }
-        }
-
-        // Save user data to the users.json file
-        private async Task SaveUserAsync(User user)
-        {
-            try
-            {
-                var existingUsers = await Utils.LoadFromJsonAsync<List<User>>(usersFilePath) ?? new List<User>();
-                var userIndex = existingUsers.FindIndex(u => u.Username == user.Username);
-
-                if (userIndex >= 0)
-                {
-                    existingUsers[userIndex] = user; // Update existing user
-                }
-                else
-                {
-                    existingUsers.Add(user); // Add new user
-                }
-
-                await Utils.SaveToJsonAsync(existingUsers, usersFilePath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving user data: {ex.Message}");
-            }
-        }
     }
 }

@@ -4,13 +4,29 @@
 @using MudBlazor
 @using System.Linq
 @using System.Threading.Tasks
+@using System.Globalization
 
 @inject DashboardService DashboardService
 @inject IJSRuntime JSRuntime
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudGrid>
-        <!-- Transaction Summary with Date, Time, and Greeting -->
+        <!-- Date Range Picker -->
+        <MudItem xs="12">
+            <MudCard>
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6">Filter by Date Range</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudDateRangePicker @bind-DateRange="_dateRange" Label="Select Date Range" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UpdateDashboardData" Class="mt-2">
+                        Apply Filter
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Transaction Summary -->
         <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
@@ -24,25 +40,24 @@
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.body1">Total Inflows:</MudText>
-                            <MudText Typo="Typo.h6" Color="Color.Success">@totalInflows.ToString("C") <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" /></MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Success">@FormatCurrency(totalInflows) <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" /></MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.body1">Total Outflows:</MudText>
-                            <MudText Typo="Typo.h6" Color="Color.Error">@totalOutflows.ToString("C") <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Error" /></MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Error">@FormatCurrency(totalOutflows) <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Error" /></MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.body1">Total Debt:</MudText>
-                            <MudText Typo="Typo.h6">@totalDebt.ToString("C")</MudText>
+                            <MudText Typo="Typo.h6">@FormatCurrency(totalDebt)</MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.body1">Remaining Debt:</MudText>
-                            <MudText Typo="Typo.h6">@remainingDebt.ToString("C")</MudText>
+                            <MudText Typo="Typo.h6">@FormatCurrency(remainingDebt)</MudText>
                         </MudItem>
-                        <!-- Add Balance Display -->
                         <MudItem xs="12">
                             <MudText Typo="Typo.body1">Current Balance:</MudText>
                             <MudText Typo="Typo.h6" Color="@(balance >= 0 ? Color.Success : Color.Error)">
-                                @balance.ToString("C")
+                                @FormatCurrency(balance)
                                 <MudIcon Icon="@(balance >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)" Color="@(balance >= 0 ? Color.Success : Color.Error)" />
                             </MudText>
                         </MudItem>
@@ -96,7 +111,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.h6">@highestInflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Success">@highestInflow?.Amount.ToString("C")</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Success">@FormatCurrency(highestInflow?.Amount ?? 0)</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -108,7 +123,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.h6">@lowestInflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Success">@lowestInflow?.Amount.ToString("C")</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Success">@FormatCurrency(lowestInflow?.Amount ?? 0)</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -120,7 +135,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.h6">@highestOutflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Error">@highestOutflow?.Amount.ToString("C")</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(highestOutflow?.Amount ?? 0)</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -132,7 +147,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.h6">@lowestOutflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Error">@lowestOutflow?.Amount.ToString("C")</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(lowestOutflow?.Amount ?? 0)</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -144,7 +159,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.h6">@highestDebt?.Creditor</MudText>
-                    <MudText Typo="Typo.body1">@highestDebt?.AmountOwed.ToString("C")</MudText>
+                    <MudText Typo="Typo.body1">@FormatCurrency(highestDebt?.AmountOwed ?? 0)</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -156,7 +171,7 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.h6">@lowestDebt?.Creditor</MudText>
-                    <MudText Typo="Typo.body1">@lowestDebt?.AmountOwed.ToString("C")</MudText>
+                    <MudText Typo="Typo.body1">@FormatCurrency(lowestDebt?.AmountOwed ?? 0)</MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -178,7 +193,7 @@
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd DataLabel="Creditor">@context.Creditor</MudTd>
-                                <MudTd DataLabel="Amount Owed">@context.AmountOwed.ToString("C")</MudTd>
+                                <MudTd DataLabel="Amount Owed">@FormatCurrency(context.AmountOwed)</MudTd>
                                 <MudTd DataLabel="Due Date">@context.DueDate.ToShortDateString()</MudTd>
                             </RowTemplate>
                         </MudTable>
@@ -198,17 +213,18 @@
     private decimal totalOutflows;
     private decimal totalDebt;
     private decimal remainingDebt;
-    private decimal balance; // Add balance field
+    private decimal balance;
 
     private List<Debt> pendingDebts = new List<Debt>();
     private string userName;
     private string greeting;
     private DateTime currentDateTime;
+    private string currency = "USD"; // Default currency
 
     // Donut Chart Data
     private double[] donutChartData;
     private string[] donutChartLabels = { "Credit", "Debit" };
-    private string[] donutChartColors = { "#4CAF50", "#F44336" }; // Green for Credit, Red for Debit
+    private string[] donutChartColors = { "#4CAF50", "#F44336" };
 
     // Highest and Lowest Transactions
     private Transaction highestInflow;
@@ -222,7 +238,7 @@
     private DateRange _dateRange = new DateRange(DateTime.Now.AddMonths(-6), DateTime.Now);
 
     // Line Chart Data
-    private int Index = -1; // Default value cannot be 0 -> first selected index is 0.
+    private int Index = -1;
     public ChartOptions Options = new ChartOptions();
     public List<ChartSeries> Series = new List<ChartSeries>();
     public string[] XAxisLabels = Array.Empty<string>();
@@ -232,25 +248,35 @@
         // Get the username from local storage
         userName = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUser") ?? "Guest";
 
+        // Get the user's preferred currency from local storage
+        currency = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userCurrency") ?? "USD";
+
+        await LoadDashboardData();
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        if (currency == "NPR")
+        {
+            return $"Rs {amount:N2}"; // Use "Rs" as the symbol for NPR
+        }
+        else
+        {
+            var cultureInfo = new CultureInfo("en-US"); // Default to USD
+            return amount.ToString("C", cultureInfo); // Use "$" for USD
+        }
+    }
+
+    private async Task LoadDashboardData()
+    {
         // Get current date and time
         currentDateTime = DateTime.Now;
 
         // Set greeting based on time of day
-        if (currentDateTime.Hour < 12)
-        {
-            greeting = "Morning";
-        }
-        else if (currentDateTime.Hour < 18)
-        {
-            greeting = "Afternoon";
-        }
-        else
-        {
-            greeting = "Evening";
-        }
+        greeting = currentDateTime.Hour < 12 ? "Morning" : currentDateTime.Hour < 18 ? "Afternoon" : "Evening";
 
         // Fetch transaction summary
-        var transactionSummary = await DashboardService.GetTransactionSummaryAsync(userName);
+        var transactionSummary = await DashboardService.GetTransactionSummaryAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
         totalInflows = transactionSummary.totalInflows;
         totalOutflows = transactionSummary.totalOutflows;
         totalDebt = transactionSummary.totalDebt;
@@ -260,14 +286,14 @@
         balance = totalInflows - totalOutflows;
 
         // Get pending debts
-        pendingDebts = await DashboardService.GetPendingDebtsAsync(userName);
+        pendingDebts = await DashboardService.GetPendingDebtsAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
 
         // Prepare Donut Chart Data
-        var categorySummary = await DashboardService.GetCategoryWiseTransactionSummaryAsync(userName);
+        var categorySummary = await DashboardService.GetCategoryWiseTransactionSummaryAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
         donutChartData = new double[] { (double)categorySummary["Credit"], (double)categorySummary["Debit"] };
 
         // Fetch highest and lowest transactions
-        var highestLowestTransactions = await DashboardService.GetHighestAndLowestTransactionsAsync(userName);
+        var highestLowestTransactions = await DashboardService.GetHighestAndLowestTransactionsAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
         highestInflow = highestLowestTransactions.highestInflow;
         lowestInflow = highestLowestTransactions.lowestInflow;
         highestOutflow = highestLowestTransactions.highestOutflow;
@@ -298,5 +324,10 @@
 
         // Notify the component to re-render
         StateHasChanged();
+    }
+
+    private async Task UpdateDashboardData()
+    {
+        await LoadDashboardData();
     }
 }

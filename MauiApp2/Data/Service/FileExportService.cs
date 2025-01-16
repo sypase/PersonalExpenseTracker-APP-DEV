@@ -37,7 +37,13 @@ namespace MauiApp2.Data.Service
                 // Add transactions to CSV
                 foreach (var transaction in transactions)
                 {
-                    var line = $"{transaction.Title},{transaction.Amount},{transaction.Date:yyyy-MM-dd},{transaction.Type},{string.Join(",", transaction.Tags)},{transaction.Notes}\n";
+                    // Format tags as "Tag1,Tag2,Tag3"
+                    var formattedTags = transaction.Tags != null && transaction.Tags.Any()
+                        ? $"\"{string.Join(",", transaction.Tags)}\""
+                        : string.Empty;
+
+                    // Ensure proper separation of columns
+                    var line = $"{EscapeCsvField(transaction.Title)},{transaction.Amount},{transaction.Date:yyyy-MM-dd},{EscapeCsvField(transaction.Type)},{formattedTags},{EscapeCsvField(transaction.Notes)}\n";
                     csvContent += line;
                 }
 
@@ -70,7 +76,7 @@ namespace MauiApp2.Data.Service
                 // Add debts to CSV
                 foreach (var debt in debts)
                 {
-                    var line = $"{debt.AmountOwed},{debt.DueDate:yyyy-MM-dd},{debt.Creditor},{(debt.IsCleared ? "Cleared" : "Outstanding")}\n";
+                    var line = $"{debt.AmountOwed},{debt.DueDate:yyyy-MM-dd},{EscapeCsvField(debt.Creditor)},{(debt.IsCleared ? "Cleared" : "Outstanding")}\n";
                     csvContent += line;
                 }
 
@@ -82,6 +88,21 @@ namespace MauiApp2.Data.Service
                 _logger.LogError($"Error exporting debts: {ex.Message}");
                 throw new InvalidOperationException($"An error occurred while exporting debts: {ex.Message}", ex);
             }
+        }
+
+        // Helper method to escape CSV fields
+        private string EscapeCsvField(string field)
+        {
+            if (string.IsNullOrEmpty(field))
+                return string.Empty;
+
+            // Escape fields containing commas or double quotes
+            if (field.Contains(",") || field.Contains("\""))
+            {
+                return $"\"{field.Replace("\"", "\"\"")}\"";
+            }
+
+            return field;
         }
     }
 }

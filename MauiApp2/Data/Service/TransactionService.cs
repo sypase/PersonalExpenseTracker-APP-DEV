@@ -14,6 +14,7 @@ namespace MauiApp2.Data.Service
     {
         private readonly string transactionsFilePath = Utils.GetTransactionsPath();
         private readonly ILogger<TransactionService> _logger;
+        private readonly Tag _tagService = new Tag(); // Use the Tag model
 
         // Constructor to inject logger
         public TransactionService(ILogger<TransactionService> logger)
@@ -89,6 +90,18 @@ namespace MauiApp2.Data.Service
                     }
                 }
 
+                // Validate tags
+                if (transaction.Tags != null)
+                {
+                    foreach (var tag in transaction.Tags)
+                    {
+                        if (!_tagService.DefaultTags.Contains(tag))
+                        {
+                            _logger.LogWarning($"Tag '{tag}' is not a predefined tag.");
+                        }
+                    }
+                }
+
                 // Proceed to add the transaction
                 var transactions = await GetTransactionsAsync(refUsername);
                 transactions.Add(transaction);
@@ -111,6 +124,18 @@ namespace MauiApp2.Data.Service
 
                 if (transaction != null)
                 {
+                    // Validate tags
+                    if (updatedTransaction.Tags != null)
+                    {
+                        foreach (var tag in updatedTransaction.Tags)
+                        {
+                            if (!_tagService.DefaultTags.Contains(tag))
+                            {
+                                _logger.LogWarning($"Tag '{tag}' is not a predefined tag.");
+                            }
+                        }
+                    }
+
                     transaction.Amount = updatedTransaction.Amount;
                     transaction.Date = updatedTransaction.Date;
                     transaction.Type = updatedTransaction.Type;

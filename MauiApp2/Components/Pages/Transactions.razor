@@ -62,17 +62,17 @@
         <RowTemplate>
             <MudTd DataLabel="Title">@context.Title</MudTd>
             <MudTd DataLabel="Amount">
-                @if (context.Type == "Debit" || context.Type == "Debt")
+                @if (context.Type == "Credit")
                 {
-                    <span style="color: green;">+ @context.Amount.ToString("C")</span>
+                    <span style="color: green;">+ @FormatCurrency(context.Amount)</span>
                 }
-                else if (context.Type == "Credit")
+                else if (context.Type == "Debit" || context.Type == "Debt")
                 {
-                    <span style="color: red;">- @context.Amount.ToString("C")</span>
+                    <span style="color: red;">- @FormatCurrency(context.Amount)</span>
                 }
                 else
                 {
-                    @context.Amount.ToString("C")
+                    @FormatCurrency(context.Amount)
                 }
             </MudTd>
             <MudTd DataLabel="Date">@context.Date?.ToString("yyyy-MM-dd")</MudTd>
@@ -99,13 +99,28 @@ else
     private string customTags;
     private string currentUser;
     private bool isEditing = false;
+    private string currency = "USD"; // Default currency
 
     protected override async Task OnInitializedAsync()
     {
         currentUser = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
+        currency = await JS.InvokeAsync<string>("localStorage.getItem", "userCurrency") ?? "USD"; // Retrieve currency from localStorage
         if (!string.IsNullOrEmpty(currentUser))
         {
             await LoadTransactions();
+        }
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        if (currency == "NPR")
+        {
+            return $"Rs {amount:N2}"; // Use "Rs" as the symbol for NPR
+        }
+        else
+        {
+            var cultureInfo = new System.Globalization.CultureInfo("en-US"); // Default to USD
+            return amount.ToString("C", cultureInfo); // Use "$" for USD
         }
     }
 
