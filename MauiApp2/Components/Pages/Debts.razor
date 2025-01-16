@@ -2,7 +2,9 @@
 @using MauiApp2.Data.Models
 @using MauiApp2.Data.Service
 @inject DebtService DebtService
+@inject TransactionService TransactionService
 @inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 <PageTitle>Manage Debts</PageTitle>
 
@@ -10,6 +12,11 @@
 
 <!-- Button to open the add debt dialog -->
 <button class="btn btn-primary" @onclick="OpenAddDebtDialog">Add Debt</button>
+
+<!-- Display Balance -->
+<div class="balance-display">
+    <h4>Current Balance: @currentBalance.ToString("C")</h4>
+</div>
 
 <!-- Debts Table -->
 @if (debts != null && debts.Any())
@@ -47,6 +54,29 @@
 else
 {
     <p>No debts found.</p>
+}
+
+<!-- No Balance Popup -->
+@if (showNoBalancePopup)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">No Balance</h5>
+                    <button type="button" class="close" aria-label="Close" @onclick="CloseNoBalancePopup">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>You have no outstanding debts.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="CloseNoBalancePopup">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 <!-- Add Debt Dialog (Hidden) -->
@@ -89,25 +119,48 @@ else
     private Debt newDebt;
     private string currentUsername;
     private bool isAddDebtDialogOpen = false;
+    private bool showNoBalancePopup = false;
+    private decimal currentBalance = 0;
 
     // Load the username from local storage
     protected override async Task OnInitializedAsync()
     {
         currentUsername = await JS.InvokeAsync<string>("localStorage.getItem", "currentUser");
         await LoadDebts();
+        await LoadBalance();
     }
 
     // Load debts for the current user
     private async Task LoadDebts()
     {
         debts = await DebtService.GetDebtsAsync(currentUsername);
+        if (debts.Sum(d => d.AmountOwed) == 0)
+        {
+            showNoBalancePopup = true;
+        }
+        StateHasChanged();
+    }
+
+    // Load the current balance
+    private async Task LoadBalance()
+    {
+        var transactions = await TransactionService.GetTransactionsAsync(currentUsername);
+        var totalInflows = transactions
+            .Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
+            .Sum(t => t.Amount);
+
+        var totalOutflows = transactions
+            .Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
+            .Sum(t => t.Amount);
+
+        currentBalance = totalInflows - totalOutflows;
         StateHasChanged();
     }
 
     // Open the dialog to add a new debt
     private void OpenAddDebtDialog()
     {
-        newDebt = new Debt(string.Empty, 0, DateTime.Now, currentUsername); // Use the correct constructor
+        newDebt = new Debt(string.Empty, 0, DateTime.Now, currentUsername);
         isAddDebtDialogOpen = true;
     }
 
@@ -131,8 +184,17 @@ else
     // Clear a debt for the current user
     private async Task ClearDebt(string creditor)
     {
-        await DebtService.ClearDebtAsync(creditor, currentUsername);
-        await LoadDebts();
+        try
+        {
+            await DebtService.ClearDebtAsync(creditor, currentUsername);
+            await LoadDebts();
+            await LoadBalance(); // Refresh the balance after clearing the debt
+            Snackbar.Add("Debt cleared successfully!", Severity.Success);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error); // Show error message
+        }
     }
 
     // Delete a debt for the current user
@@ -142,11 +204,15 @@ else
         await LoadDebts();
     }
 
+    // Close the no balance popup
+    private void CloseNoBalancePopup()
+    {
+        showNoBalancePopup = false;
+    }
+
     // Cleanup resources when the page is disposed
     public async ValueTask DisposeAsync()
     {
         // Dispose resources if necessary
     }
 }
-
-

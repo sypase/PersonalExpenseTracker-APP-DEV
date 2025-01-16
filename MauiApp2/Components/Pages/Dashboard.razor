@@ -103,75 +103,107 @@
             </MudCard>
         </MudItem>
 
-        <!-- Highest and Lowest Transactions -->
-        <MudItem xs="12" md="4">
+        <!-- Top 5 Highest Inflows -->
+        <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
-                    <MudText Typo="Typo.h6">Highest Inflow</MudText>
+                    <MudText Typo="Typo.h6">Top 5 Highest Inflows</MudText>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText Typo="Typo.h6">@highestInflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Success">@FormatCurrency(highestInflow?.Amount ?? 0)</MudText>
+                    <MudTable Items="top5HighestInflows" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Title</MudTh>
+                            <MudTh>Amount</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Title">@context.Title</MudTd>
+                            <MudTd DataLabel="Amount">@FormatCurrency(context.Amount)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        <MudItem xs="12" md="4">
+        <!-- Top 5 Lowest Inflows -->
+        <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
-                    <MudText Typo="Typo.h6">Lowest Inflow</MudText>
+                    <MudText Typo="Typo.h6">Top 5 Lowest Inflows</MudText>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText Typo="Typo.h6">@lowestInflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Success">@FormatCurrency(lowestInflow?.Amount ?? 0)</MudText>
+                    <MudTable Items="top5LowestInflows" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Title</MudTh>
+                            <MudTh>Amount</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Title">@context.Title</MudTd>
+                            <MudTd DataLabel="Amount">@FormatCurrency(context.Amount)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        <MudItem xs="12" md="4">
+        <!-- Top 5 Highest Outflows -->
+        <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
-                    <MudText Typo="Typo.h6">Highest Outflow</MudText>
+                    <MudText Typo="Typo.h6">Top 5 Highest Outflows</MudText>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText Typo="Typo.h6">@highestOutflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(highestOutflow?.Amount ?? 0)</MudText>
+                    <MudTable Items="top5HighestOutflows" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Title</MudTh>
+                            <MudTh>Amount</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Title">@context.Title</MudTd>
+                            <MudTd DataLabel="Amount">@FormatCurrency(context.Amount)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        <MudItem xs="12" md="4">
+        <!-- Top 5 Lowest Outflows -->
+        <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
-                    <MudText Typo="Typo.h6">Lowest Outflow</MudText>
+                    <MudText Typo="Typo.h6">Top 5 Lowest Outflows</MudText>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText Typo="Typo.h6">@lowestOutflow?.Title</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(lowestOutflow?.Amount ?? 0)</MudText>
+                    <MudTable Items="top5LowestOutflows" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Title</MudTh>
+                            <MudTh>Amount</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Title">@context.Title</MudTd>
+                            <MudTd DataLabel="Amount">@FormatCurrency(context.Amount)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 </MudCardContent>
             </MudCard>
         </MudItem>
 
-        <MudItem xs="12" md="4">
+        <!-- Top 5 Highest Debts -->
+        <MudItem xs="12" md="6">
             <MudCard>
                 <MudCardHeader>
-                    <MudText Typo="Typo.h6">Highest Debt</MudText>
+                    <MudText Typo="Typo.h6">Top 5 Highest Debts</MudText>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText Typo="Typo.h6">@highestDebt?.Creditor</MudText>
-                    <MudText Typo="Typo.body1">@FormatCurrency(highestDebt?.AmountOwed ?? 0)</MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" md="4">
-            <MudCard>
-                <MudCardHeader>
-                    <MudText Typo="Typo.h6">Lowest Debt</MudText>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.h6">@lowestDebt?.Creditor</MudText>
-                    <MudText Typo="Typo.body1">@FormatCurrency(lowestDebt?.AmountOwed ?? 0)</MudText>
+                    <MudTable Items="top5HighestDebts" Hover="true" Bordered="true" Striped="true">
+                        <HeaderContent>
+                            <MudTh>Creditor</MudTh>
+                            <MudTh>Amount Owed</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Creditor">@context.Creditor</MudTd>
+                            <MudTd DataLabel="Amount Owed">@FormatCurrency(context.AmountOwed)</MudTd>
+                        </RowTemplate>
+                    </MudTable>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -226,13 +258,12 @@
     private string[] donutChartLabels = { "Credit", "Debit" };
     private string[] donutChartColors = { "#4CAF50", "#F44336" };
 
-    // Highest and Lowest Transactions
-    private Transaction highestInflow;
-    private Transaction lowestInflow;
-    private Transaction highestOutflow;
-    private Transaction lowestOutflow;
-    private Debt highestDebt;
-    private Debt lowestDebt;
+    // Top 5 Lists
+    private List<Transaction> top5HighestInflows = new List<Transaction>();
+    private List<Transaction> top5LowestInflows = new List<Transaction>();
+    private List<Transaction> top5HighestOutflows = new List<Transaction>();
+    private List<Transaction> top5LowestOutflows = new List<Transaction>();
+    private List<Debt> top5HighestDebts = new List<Debt>();
 
     // Date Range Picker
     private DateRange _dateRange = new DateRange(DateTime.Now.AddMonths(-6), DateTime.Now);
@@ -282,7 +313,7 @@
         totalDebt = transactionSummary.totalDebt;
         remainingDebt = transactionSummary.remainingDebt;
 
-        // Calculate balance
+        // Calculate balance (inflows - outflows)
         balance = totalInflows - totalOutflows;
 
         // Get pending debts
@@ -292,14 +323,13 @@
         var categorySummary = await DashboardService.GetCategoryWiseTransactionSummaryAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
         donutChartData = new double[] { (double)categorySummary["Credit"], (double)categorySummary["Debit"] };
 
-        // Fetch highest and lowest transactions
-        var highestLowestTransactions = await DashboardService.GetHighestAndLowestTransactionsAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
-        highestInflow = highestLowestTransactions.highestInflow;
-        lowestInflow = highestLowestTransactions.lowestInflow;
-        highestOutflow = highestLowestTransactions.highestOutflow;
-        lowestOutflow = highestLowestTransactions.lowestOutflow;
-        highestDebt = highestLowestTransactions.highestDebt;
-        lowestDebt = highestLowestTransactions.lowestDebt;
+        // Fetch top 5 highest/lowest inflows, outflows, and debts
+        var top5Data = await DashboardService.GetTop5TransactionsAndDebtsAsync(userName, _dateRange.Start.Value, _dateRange.End.Value);
+        top5HighestInflows = top5Data.top5HighestInflows;
+        top5LowestInflows = top5Data.top5LowestInflows;
+        top5HighestOutflows = top5Data.top5HighestOutflows;
+        top5LowestOutflows = top5Data.top5LowestOutflows;
+        top5HighestDebts = top5Data.top5HighestDebts;
 
         // Initialize Line Chart
         await UpdateLineChart();

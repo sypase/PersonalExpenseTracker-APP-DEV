@@ -8,25 +8,49 @@ namespace MauiApp2.Data.Service
 {
     internal class DebtService
     {
-        private string debtsFilePath = Utils.GetDebtsPath();
+        private readonly string debtsFilePath = Utils.GetDebtsPath();
+        private readonly TransactionService _transactionService;
 
-        // Get a list of debts from the debts.json file for a specific user
-        public async Task<List<Debt>> GetDebtsAsync(string username)
+        // Inject TransactionService in the constructor
+        public DebtService(TransactionService transactionService)
+        {
+            _transactionService = transactionService;
+        }
+
+        // Helper method to load debts from file
+        private async Task<Dictionary<string, List<Debt>>> LoadDebtsAsync()
         {
             try
             {
-                var allDebts = await Utils.LoadFromJsonAsync<Dictionary<string, List<Debt>>>(debtsFilePath);
-                if (allDebts != null && allDebts.ContainsKey(username))
-                {
-                    return allDebts[username];
-                }
-                return new List<Debt>();
+                return await Utils.LoadFromJsonAsync<Dictionary<string, List<Debt>>>(debtsFilePath)
+                       ?? new Dictionary<string, List<Debt>>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting debts: {ex.Message}");
-                return new List<Debt>();
+                // Replace Console.WriteLine with a logging framework in a real-world application
+                Console.WriteLine($"Error loading debts: {ex.Message}");
+                return new Dictionary<string, List<Debt>>();
             }
+        }
+
+        // Helper method to save debts to file
+        private async Task SaveDebtsAsync(Dictionary<string, List<Debt>> allDebts)
+        {
+            try
+            {
+                await Utils.SaveToJsonAsync(allDebts, debtsFilePath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving debts: {ex.Message}");
+            }
+        }
+
+        // Get a list of debts for a specific user
+        public async Task<List<Debt>> GetDebtsAsync(string username)
+        {
+            var allDebts = await LoadDebtsAsync();
+            return allDebts.TryGetValue(username, out var debts) ? debts : new List<Debt>();
         }
 
         // Get total amount of active debts for a user
@@ -47,16 +71,14 @@ namespace MauiApp2.Data.Service
         public async Task<decimal> GetOverdueAmountAsync(string username)
         {
             var debts = await GetDebtsAsync(username);
-            return debts.Where(d => !d.IsCleared && d.DueDate < DateTime.Now)
-                       .Sum(d => d.AmountOwed);
+            return debts.Where(d => !d.IsCleared && d.DueDate < DateTime.Now).Sum(d => d.AmountOwed);
         }
 
         // Get debts by creditor
         public async Task<List<Debt>> GetDebtsByCreditorAsync(string username, string creditor)
         {
             var debts = await GetDebtsAsync(username);
-            return debts.Where(d => d.Creditor.Equals(creditor, StringComparison.OrdinalIgnoreCase))
-                       .ToList();
+            return debts.Where(d => d.Creditor.Equals(creditor, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
         // Get debts due within specified days
@@ -64,11 +86,8 @@ namespace MauiApp2.Data.Service
         {
             var debts = await GetDebtsAsync(username);
             var futureDate = DateTime.Now.AddDays(daysAhead);
-            return debts.Where(d => !d.IsCleared &&
-                                  d.DueDate > DateTime.Now &&
-                                  d.DueDate <= futureDate)
-                       .OrderBy(d => d.DueDate)
-                       .ToList();
+            return debts.Where(d => !d.IsCleared && d.DueDate > DateTime.Now && d.DueDate <= futureDate)
+                        .OrderBy(d => d.DueDate).ToList();
         }
 
         // Get debt summary
@@ -82,36 +101,16 @@ namespace MauiApp2.Data.Service
                 TotalAmount = debts.Sum(d => d.AmountOwed),
                 ActiveAmount = debts.Where(d => !d.IsCleared).Sum(d => d.AmountOwed),
                 OverdueDebts = debts.Count(d => !d.IsCleared && d.DueDate < DateTime.Now),
-                OverdueAmount = debts.Where(d => !d.IsCleared && d.DueDate < DateTime.Now)
-                                   .Sum(d => d.AmountOwed),
-                EarliestDueDate = debts.Where(d => !d.IsCleared)
-                                     .Min(d => d.DueDate),
-                LatestDueDate = debts.Where(d => !d.IsCleared)
-                                   .Max(d => d.DueDate)
+                OverdueAmount = debts.Where(d => !d.IsCleared && d.DueDate < DateTime.Now).Sum(d => d.AmountOwed),
+                EarliestDueDate = debts.Where(d => !d.IsCleared).Min(d => d.DueDate),
+                LatestDueDate = debts.Where(d => !d.IsCleared).Max(d => d.DueDate)
             };
-        }
-
-        // Save a list of debts to the debts.json file for all users
-        public async Task SaveDebtsAsync(Dictionary<string, List<Debt>> allDebts)
-        {
-            try
-            {
-                await Utils.SaveToJsonAsync(allDebts, debtsFilePath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving debts: {ex.Message}");
-            }
         }
 
         // Add a new debt for a specific user
         public async Task AddDebtAsync(Debt debt)
         {
-            var allDebts = await Utils.LoadFromJsonAsync<Dictionary<string, List<Debt>>>(debtsFilePath);
-            if (allDebts == null)
-            {
-                allDebts = new Dictionary<string, List<Debt>>();
-            }
+            var allDebts = await LoadDebtsAsync();
             if (!allDebts.ContainsKey(debt.RefUsername))
             {
                 allDebts[debt.RefUsername] = new List<Debt>();
@@ -123,11 +122,11 @@ namespace MauiApp2.Data.Service
         // Update existing debt
         public async Task UpdateDebtAsync(string username, string creditor, Debt updatedDebt)
         {
-            var allDebts = await Utils.LoadFromJsonAsync<Dictionary<string, List<Debt>>>(debtsFilePath);
-            if (allDebts != null && allDebts.ContainsKey(username))
+            var allDebts = await LoadDebtsAsync();
+            if (allDebts.ContainsKey(username))
             {
                 var debtList = allDebts[username];
-                var existingDebt = debtList.FirstOrDefault(d => d.Creditor == creditor);
+                var existingDebt = debtList.FirstOrDefault(d => d.Creditor.Equals(creditor, StringComparison.OrdinalIgnoreCase));
                 if (existingDebt != null)
                 {
                     debtList.Remove(existingDebt);
@@ -137,16 +136,38 @@ namespace MauiApp2.Data.Service
             }
         }
 
-        // Mark a debt as cleared for a specific user
+        // Mark a debt as cleared for a specific user and add a transaction
+        // Mark a debt as cleared for a specific user and add a transaction
         public async Task ClearDebtAsync(string creditor, string username)
         {
-            var allDebts = await Utils.LoadFromJsonAsync<Dictionary<string, List<Debt>>>(debtsFilePath);
-            if (allDebts != null && allDebts.ContainsKey(username))
+            var allDebts = await LoadDebtsAsync();
+            if (allDebts.ContainsKey(username))
             {
                 var debts = allDebts[username];
-                var debt = debts.FirstOrDefault(d => d.Creditor == creditor);
+                var debt = debts.FirstOrDefault(d => d.Creditor.Equals(creditor, StringComparison.OrdinalIgnoreCase));
                 if (debt != null)
                 {
+                    // Check if the user has sufficient balance
+                    var hasSufficientBalance = await _transactionService.HasSufficientBalanceAsync(username, debt.AmountOwed);
+                    if (!hasSufficientBalance)
+                    {
+                        throw new InvalidOperationException("Insufficient balance to clear this debt.");
+                    }
+
+                    // Add a transaction for the cleared debt
+                    var transaction = new Transaction(
+                        title: $"Debt Cleared: {debt.Creditor}", // Title
+                        amount: debt.AmountOwed, // Amount
+                        date: DateTime.Now, // Date
+                        type: "Debit", // Type (assuming clearing a debt is a debit transaction)
+                        tags: new List<string> { "Debt" }, // Tags
+                        notes: $"Cleared debt with {debt.Creditor}", // Notes
+                        refUsername: username // RefUsername
+                    );
+
+                    await _transactionService.AddTransactionAsync(transaction, username);
+
+                    // Mark the debt as cleared
                     debt.ClearDebt();
                     await SaveDebtsAsync(allDebts);
                 }
@@ -156,11 +177,11 @@ namespace MauiApp2.Data.Service
         // Delete a debt
         public async Task DeleteDebtAsync(string username, string creditor)
         {
-            var allDebts = await Utils.LoadFromJsonAsync<Dictionary<string, List<Debt>>>(debtsFilePath);
-            if (allDebts != null && allDebts.ContainsKey(username))
+            var allDebts = await LoadDebtsAsync();
+            if (allDebts.ContainsKey(username))
             {
                 var debtList = allDebts[username];
-                var debtToRemove = debtList.FirstOrDefault(d => d.Creditor == creditor);
+                var debtToRemove = debtList.FirstOrDefault(d => d.Creditor.Equals(creditor, StringComparison.OrdinalIgnoreCase));
                 if (debtToRemove != null)
                 {
                     debtList.Remove(debtToRemove);
@@ -170,7 +191,7 @@ namespace MauiApp2.Data.Service
         }
     }
 
-    // Additional class to hold debt summary information
+    // DebtSummary class
     public class DebtSummary
     {
         public int TotalDebts { get; set; }

@@ -34,7 +34,7 @@ namespace MauiApp2.Data.Service
             return (totalTransactions, totalTransactionAmount);
         }
 
-        public async Task<(decimal totalInflows, decimal totalOutflows, decimal totalDebt, decimal clearedDebt, decimal remainingDebt)> GetTransactionSummaryAsync(string username, DateTime startDate, DateTime endDate)
+        public async Task<(decimal totalInflows, decimal totalOutflows, decimal totalDebt, decimal clearedDebt, decimal remainingDebt, decimal balance)> GetTransactionSummaryAsync(string username, DateTime startDate, DateTime endDate)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username) ?? new List<Transaction>();
             var filteredTransactions = transactions
@@ -46,26 +46,36 @@ namespace MauiApp2.Data.Service
                 .Where(d => d.DueDate >= startDate && d.DueDate <= endDate)
                 .ToList();
 
+            // Calculate total inflows (credits)
             var totalInflows = filteredTransactions
                 .Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
                 .Sum(t => t.Amount);
 
+            // Calculate total outflows (debits only, excluding debts)
             var totalOutflows = filteredTransactions
                 .Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
                 .Sum(t => t.Amount);
 
+            // Calculate total debt
             var totalDebt = filteredDebts.Sum(d => d.AmountOwed);
+
+            // Calculate cleared debt
             var clearedDebt = filteredDebts.Where(d => d.IsCleared).Sum(d => d.AmountOwed);
+
+            // Calculate remaining debt
             var remainingDebt = filteredDebts.Where(d => !d.IsCleared).Sum(d => d.AmountOwed);
 
-            return (totalInflows, totalOutflows, totalDebt, clearedDebt, remainingDebt);
+            // Calculate balance (inflows - outflows)
+            var balance = totalInflows - totalOutflows;
+
+            return (totalInflows, totalOutflows, totalDebt, clearedDebt, remainingDebt, balance);
         }
 
         #endregion
 
         #region Highest and Lowest Transactions
 
-        public async Task<(Transaction highestInflow, Transaction lowestInflow, Transaction highestOutflow, Transaction lowestOutflow, Debt highestDebt, Debt lowestDebt)> GetHighestAndLowestTransactionsAsync(string username, DateTime startDate, DateTime endDate)
+        public async Task<(List<Transaction> top5HighestInflows, List<Transaction> top5LowestInflows, List<Transaction> top5HighestOutflows, List<Transaction> top5LowestOutflows, List<Debt> top5HighestDebts)> GetTop5TransactionsAndDebtsAsync(string username, DateTime startDate, DateTime endDate)
         {
             var transactions = await _transactionService.GetTransactionsAsync(username);
             var filteredTransactions = transactions
@@ -77,35 +87,41 @@ namespace MauiApp2.Data.Service
                 .Where(d => d.DueDate >= startDate && d.DueDate <= endDate)
                 .ToList();
 
-            var highestInflow = filteredTransactions
+            // Get top 5 highest inflows
+            var top5HighestInflows = filteredTransactions
                 .Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(t => t.Amount)
-                .FirstOrDefault();
+                .Take(5)
+                .ToList();
 
-            var lowestInflow = filteredTransactions
+            // Get top 5 lowest inflows
+            var top5LowestInflows = filteredTransactions
                 .Where(t => t.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(t => t.Amount)
-                .FirstOrDefault();
+                .Take(5)
+                .ToList();
 
-            var highestOutflow = filteredTransactions
+            // Get top 5 highest outflows
+            var top5HighestOutflows = filteredTransactions
                 .Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(t => t.Amount)
-                .FirstOrDefault();
+                .Take(5)
+                .ToList();
 
-            var lowestOutflow = filteredTransactions
+            // Get top 5 lowest outflows
+            var top5LowestOutflows = filteredTransactions
                 .Where(t => t.Type.Equals("Debit", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(t => t.Amount)
-                .FirstOrDefault();
+                .Take(5)
+                .ToList();
 
-            var highestDebt = filteredDebts
+            // Get top 5 highest debts
+            var top5HighestDebts = filteredDebts
                 .OrderByDescending(d => d.AmountOwed)
-                .FirstOrDefault();
+                .Take(5)
+                .ToList();
 
-            var lowestDebt = filteredDebts
-                .OrderBy(d => d.AmountOwed)
-                .FirstOrDefault();
-
-            return (highestInflow, lowestInflow, highestOutflow, lowestOutflow, highestDebt, lowestDebt);
+            return (top5HighestInflows, top5LowestInflows, top5HighestOutflows, top5LowestOutflows, top5HighestDebts);
         }
 
         #endregion
@@ -138,6 +154,7 @@ namespace MauiApp2.Data.Service
                 { "Debit", 0 }
             };
 
+            // Add inflows to "Credit"
             foreach (var transaction in filteredTransactions)
             {
                 if (transaction.Type.Equals("Credit", StringComparison.OrdinalIgnoreCase))

@@ -18,7 +18,7 @@
     <MudSelect T="string" @bind-Value="newTransaction.Type" Label="Type" Required ErrorText="Type is required">
         <MudSelectItem Value="@("Credit")">Credit</MudSelectItem>
         <MudSelectItem Value="@("Debit")">Debit</MudSelectItem>
-        <MudSelectItem Value="@("Debt")">Debt</MudSelectItem>
+        @* <MudSelectItem Value="@("Debt")">Debt</MudSelectItem> *@
     </MudSelect>
 
     <MudSelect T="string" Value="selectedTag" ValueChanged="@((string val) => SelectedTagChanged(val))" Label="Tags">
